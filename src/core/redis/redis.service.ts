@@ -19,6 +19,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       host: config.host,
       port: config.port,
       password: config.password || undefined,
+      tls: {},
     });
   }
 

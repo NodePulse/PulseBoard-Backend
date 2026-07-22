@@ -28,4 +28,8 @@ export default Joi.object({
   REDIS_PORT: Joi.number().required(),
 
   REDIS_PASSWORD: Joi.allow('').optional(),
+
+  RESEND_API_KEY: Joi.string().required(),
+
+  RESEND_FROM_EMAIL: Joi.string().email().required(),
 });

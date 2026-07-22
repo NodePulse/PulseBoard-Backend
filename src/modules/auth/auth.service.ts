@@ -16,6 +16,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { RedisService } from 'src/core/redis/redis.service';
+import { MailService } from 'src/core/mail/mail.service';
 
 export interface JwtPayload {
   sub: string;
@@ -35,6 +36,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly redisService: RedisService,
+    private readonly mailService: MailService,
   ) { }
 
   // FUNC
@@ -113,13 +115,12 @@ export class AuthService {
 
     const savedUser = await this.userRepository.save(user);
 
-    // Simulate sending email by logging to console
-    console.log('\n--- EMAIL SIMULATION ---');
-    console.log(`To: ${email}`);
-    console.log(`Subject: Verify your PulseBoard Account`);
-    console.log(`Magic Link: http://localhost:5000/api/${API_PATHS.AUTH.ROOT}/${API_PATHS.AUTH.VERIFY_MAGIC}?token=${verificationToken}`);
-    console.log(`OTP Code: ${verificationOtp}`);
-    console.log('------------------------\n');
+    const magicLink = `http://localhost:5000/api/${API_PATHS.AUTH.ROOT}/${API_PATHS.AUTH.VERIFY_MAGIC}?token=${verificationToken}`;
+    await this.mailService.sendVerificationEmail({
+      to: email,
+      magicLink,
+      otp: verificationOtp,
+    });
 
     return savedUser;
   }
@@ -339,22 +340,26 @@ export class AuthService {
 
     const verificationExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
-    console.log('\n--- EMAIL SIMULATION (RESEND) ---');
-    console.log(`To: ${email}`);
-    console.log(`Subject: Re-verify your PulseBoard Account`);
+    let magicLink: string | undefined;
+    let otp: string | undefined;
 
     if (method === VERIFICATION_METHODS.MAGIC) {
       const verificationToken = randomUUID();
       user.verificationToken = verificationToken;
       user.verificationOtp = null;
-      console.log(`Magic Link: http://localhost:5000/api/${API_PATHS.AUTH.ROOT}/${API_PATHS.AUTH.VERIFY_MAGIC}?token=${verificationToken}`);
+      magicLink = `http://localhost:5000/api/${API_PATHS.AUTH.ROOT}/${API_PATHS.AUTH.VERIFY_MAGIC}?token=${verificationToken}`;
     } else {
       const verificationOtp = Math.floor(100000 + Math.random() * 900000).toString();
       user.verificationOtp = verificationOtp;
       user.verificationToken = null;
-      console.log(`OTP Code: ${verificationOtp}`);
+      otp = verificationOtp;
     }
-    console.log('---------------------------------\n');
+
+    await this.mailService.sendVerificationEmail({
+      to: email,
+      magicLink,
+      otp,
+    });
 
     user.verificationExpiresAt = verificationExpiresAt;
     await this.userRepository.save(user);

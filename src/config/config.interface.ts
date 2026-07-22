@@ -24,9 +24,15 @@ export interface RedisConfig {
   password?: string;
 }
 
+export interface MailConfig {
+  apiKey: string;
+  fromEmail: string;
+}
+
 export interface AllConfig {
   app: AppConfig;
   database: DatabaseConfig;
   jwt: JwtConfig;
   redis: RedisConfig;
+  mail: MailConfig;
 }
