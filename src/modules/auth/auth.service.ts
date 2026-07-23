@@ -97,7 +97,6 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(password, salt);
 
     const verificationToken = randomUUID();
-    const verificationOtp = Math.floor(100000 + Math.random() * 900000).toString();
     const verificationExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
     const user = this.userRepository.create({
@@ -109,17 +108,18 @@ export class AuthService {
       tenantId: null,
       isEmailVerified: false,
       verificationToken,
-      verificationOtp,
+      verificationOtp: null,
       verificationExpiresAt,
     });
 
     const savedUser = await this.userRepository.save(user);
 
-    const magicLink = `http://localhost:5000/api/${API_PATHS.AUTH.ROOT}/${API_PATHS.AUTH.VERIFY_MAGIC}?token=${verificationToken}`;
+    const frontendUrl = this.configService.get<string>('app.frontendUrl');
+    const magicLink = `${frontendUrl}/verify-magic?token=${verificationToken}`;
     await this.mailService.sendVerificationEmail({
       to: email,
       magicLink,
-      otp: verificationOtp,
+      jobId: randomUUID(),
     });
 
     return savedUser;
@@ -299,6 +299,9 @@ export class AuthService {
 
     await this.userRepository.save(user);
 
+    // Immediately prune completed mail jobs from the queue to clean it up
+    await this.mailService.cleanCompletedJobs();
+
     return { message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS };
   }
 
@@ -307,12 +310,13 @@ export class AuthService {
     const { email, otp } = dto;
 
     const user = await this.userRepository.findByEmailAndTenant(email, null);
-    if (!user || user.verificationOtp !== otp) {
+    if (!user) {
       throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
     }
 
-    if (user.verificationExpiresAt && new Date() > user.verificationExpiresAt) {
-      throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_EXPIRED);
+    const storedOtp = await this.redisService.get(`otp:${email}`);
+    if (!storedOtp || storedOtp !== otp) {
+      throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
     }
 
     user.isEmailVerified = true;
@@ -321,6 +325,7 @@ export class AuthService {
     user.verificationExpiresAt = null;
 
     await this.userRepository.save(user);
+    await this.redisService.del(`otp:${email}`);
 
     return { message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS };
   }
@@ -347,22 +352,21 @@ export class AuthService {
       const verificationToken = randomUUID();
       user.verificationToken = verificationToken;
       user.verificationOtp = null;
-      magicLink = `http://localhost:5000/api/${API_PATHS.AUTH.ROOT}/${API_PATHS.AUTH.VERIFY_MAGIC}?token=${verificationToken}`;
+      const frontendUrl = this.configService.get<string>('app.frontendUrl');
+      magicLink = `${frontendUrl}/verify-magic?token=${verificationToken}`;
+      
+      await this.mailService.sendVerificationEmail({
+        to: email,
+        magicLink,
+        jobId: randomUUID(),
+      });
+
+      user.verificationExpiresAt = verificationExpiresAt;
+      await this.userRepository.save(user);
     } else {
       const verificationOtp = Math.floor(100000 + Math.random() * 900000).toString();
-      user.verificationOtp = verificationOtp;
-      user.verificationToken = null;
-      otp = verificationOtp;
+      await this.redisService.set(`otp:${email}`, verificationOtp, 300); // 5 minutes TTL
     }
-
-    await this.mailService.sendVerificationEmail({
-      to: email,
-      magicLink,
-      otp,
-    });
-
-    user.verificationExpiresAt = verificationExpiresAt;
-    await this.userRepository.save(user);
 
     return { message: RESPONSE_MESSAGES.RESEND_SUCCESS };
   }

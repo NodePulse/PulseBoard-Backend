@@ -34,12 +34,12 @@ export class MailProcessor extends WorkerHost {
 
   private async handleSendVerification(data: VerificationMailJob) {
     let html = `<h1>Verify your PulseBoard Account</h1>`;
-    
+
     if (data.magicLink) {
       html += `<p>Click the link below to verify your account:</p>
                <a href="${data.magicLink}">Verify Account</a><br/><br/>`;
     }
-    
+
     if (data.otp) {
       html += `<p>Or use this One-Time Password (OTP):</p>
                <h2>${data.otp}</h2>`;
@@ -52,6 +52,7 @@ export class MailProcessor extends WorkerHost {
         subject: 'Verify your PulseBoard Account',
         html,
       });
+      console.log("Email sent successfully")
     } catch (error) {
       console.error(`Failed to send verification email to ${data.to}:`, error);
       throw error;

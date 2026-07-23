@@ -3,6 +3,7 @@ export interface AppConfig {
   env: string;
   port: number;
   prefix: string;
+  frontendUrl: string;
 }
 
 export interface DatabaseConfig {
