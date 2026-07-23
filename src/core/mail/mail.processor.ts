@@ -19,7 +19,9 @@ export class MailProcessor extends WorkerHost {
         pass: this.configService.get<string>('mail.pass'),
       },
     });
-    this.fromEmail = this.configService.get<string>('mail.fromEmail') || 'noreply@pulseboard.com';
+    this.fromEmail =
+      this.configService.get<string>('mail.fromEmail') ||
+      'noreply@pulseboard.com';
   }
 
   async process(job: Job<VerificationMailJob>) {
@@ -52,7 +54,7 @@ export class MailProcessor extends WorkerHost {
         subject: 'Verify your PulseBoard Account',
         html,
       });
-      console.log("Email sent successfully")
+      console.log('Email sent successfully');
     } catch (error) {
       console.error(`Failed to send verification email to ${data.to}:`, error);
       throw error;
