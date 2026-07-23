@@ -29,7 +29,13 @@ export default Joi.object({
 
   REDIS_PASSWORD: Joi.allow('').optional(),
 
-  RESEND_API_KEY: Joi.string().required(),
+  SMTP_HOST: Joi.string().required(),
 
-  RESEND_FROM_EMAIL: Joi.string().email().required(),
+  SMTP_PORT: Joi.number().required(),
+
+  SMTP_USER: Joi.string().required(),
+
+  SMTP_PASS: Joi.string().required(),
+
+  SMTP_FROM_EMAIL: Joi.string().email().required(),
 });

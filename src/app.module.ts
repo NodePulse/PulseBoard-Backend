@@ -20,7 +20,7 @@ import { ConfigService } from '@nestjs/config';
           host: configService.get<string>('redis.host'),
           port: configService.get<number>('redis.port'),
           password: configService.get<string>('redis.password'),
-          tls: {},
+          tls: { servername: configService.get<string>('redis.host') },
         },
       }),
     }),

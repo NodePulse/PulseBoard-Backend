@@ -1,18 +1,25 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { ConfigService } from '@nestjs/config';
-import { Resend } from 'resend';
+import * as nodemailer from 'nodemailer';
 import { VerificationMailJob } from './mail.service';
 
 @Processor('mail-queue')
 export class MailProcessor extends WorkerHost {
-  private resend: Resend;
+  private transporter: nodemailer.Transporter;
   private fromEmail: string;
 
   constructor(private readonly configService: ConfigService) {
     super();
-    this.resend = new Resend(this.configService.get<string>('mail.apiKey'));
-    this.fromEmail = this.configService.get<string>('mail.fromEmail') || 'onboarding@resend.dev';
+    this.transporter = nodemailer.createTransport({
+      host: this.configService.get<string>('mail.host'),
+      port: this.configService.get<number>('mail.port'),
+      auth: {
+        user: this.configService.get<string>('mail.user'),
+        pass: this.configService.get<string>('mail.pass'),
+      },
+    });
+    this.fromEmail = this.configService.get<string>('mail.fromEmail') || 'noreply@pulseboard.com';
   }
 
   async process(job: Job<VerificationMailJob>) {
@@ -39,16 +46,12 @@ export class MailProcessor extends WorkerHost {
     }
 
     try {
-      const { error } = await this.resend.emails.send({
-        from: `PulseBoard <${this.fromEmail}>`,
+      await this.transporter.sendMail({
+        from: `"PulseBoard" <${this.fromEmail}>`,
         to: data.to,
         subject: 'Verify your PulseBoard Account',
         html,
       });
-
-      if (error) {
-        throw new Error(error.message);
-      }
     } catch (error) {
       console.error(`Failed to send verification email to ${data.to}:`, error);
       throw error;

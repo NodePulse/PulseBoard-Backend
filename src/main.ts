@@ -17,6 +17,7 @@ async function bootstrap() {
     transformOptions: { enableImplicitConversion: true },
     stopAtFirstError: true,
   }))
+  app.enableCors({ origin: ["http://localhost:3000"] })
 
   app.setGlobalPrefix('api');
 

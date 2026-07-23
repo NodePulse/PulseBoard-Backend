@@ -7,7 +7,7 @@ import { RedisConfig } from '../../config/config.interface';
 export class RedisService implements OnModuleInit, OnModuleDestroy {
   private client: Redis;
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly configService: ConfigService) { }
 
   onModuleInit() {
     const config = this.configService.get<RedisConfig>('redis');
@@ -19,7 +19,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       host: config.host,
       port: config.port,
       password: config.password || undefined,
-      tls: {},
+      tls: {
+        servername: config.host
+      },
     });
   }
 
