@@ -5,6 +5,7 @@ import { AllConfig } from './config/config.interface';
 import { ValidationPipe } from '@nestjs/common';
 import { TransformInterceptor } from './core/interceptors/transform.interceptor';
 import { HttpExceptionFilter } from './core/filters/http-exception.filter';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -17,7 +18,11 @@ async function bootstrap() {
     transformOptions: { enableImplicitConversion: true },
     stopAtFirstError: true,
   }))
-  app.enableCors({ origin: ["http://localhost:3000"] })
+  app.use(cookieParser());
+  app.enableCors({
+    origin: ["http://localhost:3000"],
+    credentials: true,
+  })
 
   app.setGlobalPrefix('api');
 

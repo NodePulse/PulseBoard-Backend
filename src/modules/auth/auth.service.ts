@@ -7,7 +7,6 @@ import { RegisterUserDTO } from './dto/registerUser.dto';
 import { LoginUserDTO } from './dto/loginUser.dto';
 import { VerifyOtpDTO } from './dto/verifyOtp.dto';
 import { ResendVerificationDTO } from './dto/resendVerification.dto';
-import { RefreshTokenDTO } from './dto/refreshToken.dto';
 import * as bcrypt from 'bcrypt';
 import { RESPONSE_MESSAGES, VERIFICATION_METHODS } from '../../core/constants/messages';
 import { API_PATHS } from '../../core/constants/paths';
@@ -183,11 +182,10 @@ export class AuthService {
 
   // SERVICE
   public async refreshTokens(
-    dto: RefreshTokenDTO,
+    refreshToken: string,
     deviceName?: string,
     ipAddress?: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
-    const { refreshToken } = dto;
 
     let payload: JwtPayload;
     try {
@@ -399,5 +397,40 @@ export class AuthService {
 
     // Also blacklist the jti in Redis (set a default TTL of 7 days)
     await this.redisService.set(`blacklist:${session.jti}`, 'revoked', 7 * 24 * 60 * 60);
+  }
+
+  // SERVICE — Session bootstrap (GET /auth/me)
+  public async getMe(userId: string): Promise<Omit<User, 'passwordHash'>> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException(RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN);
+    }
+    const { passwordHash, ...userResponse } = user;
+    return userResponse;
+  }
+
+  // SERVICE — CSRF token generation
+  public async generateCsrfToken(userId: string): Promise<string> {
+    const token = randomUUID();
+    // Store in Redis with 1-hour TTL, keyed by userId
+    await this.redisService.set(`csrf:${userId}`, token, 3600);
+    return token;
+  }
+
+  // SERVICE — CSRF token validation
+  public async validateCsrfToken(userId: string, token: string): Promise<boolean> {
+    const stored = await this.redisService.get(`csrf:${userId}`);
+    return stored === token;
+  }
+
+  // HELPER — HttpOnly cookie options for refresh token
+  public getRefreshCookieOptions(maxAge?: number) {
+    return {
+      httpOnly: true,
+      secure: this.configService.get<string>('app.env') === 'production',
+      sameSite: 'strict' as const,
+      path: '/api/auth',
+      maxAge: maxAge ?? 7 * 24 * 60 * 60 * 1000, // 7 days in ms
+    };
   }
 }
