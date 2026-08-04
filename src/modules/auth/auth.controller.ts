@@ -18,7 +18,6 @@ import { RegisterUserDTO } from './dto/registerUser.dto';
 import { LoginUserDTO } from './dto/loginUser.dto';
 import { VerifyOtpDTO } from './dto/verifyOtp.dto';
 import { ResendVerificationDTO } from './dto/resendVerification.dto';
-import { RefreshTokenDTO } from './dto/refreshToken.dto';
 import { API_PATHS } from '../../core/constants/paths';
 import { ResponseMessage } from '../../core/decorators/response-message.decorator';
 import { RESPONSE_MESSAGES } from '../../core/constants/messages';
@@ -26,6 +25,8 @@ import { JwtAuthGuard } from '../../core/guards/jwt-auth.guard';
 import { SessionGuard } from '../../core/guards/session.guard';
 import { CurrentUser } from '../../core/decorators/current-user.decorator';
 import type { Request, Response } from 'express';
+
+const REFRESH_COOKIE_NAME = 'pulseboard_rt';
 
 @Controller(API_PATHS.AUTH.ROOT)
 export class AuthController {
@@ -49,46 +50,57 @@ export class AuthController {
     const { accessToken, refreshToken, user } =
       await this.authService.loginUser(dto, deviceName, ipAddress);
 
-    res.cookie('refresh_token', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      path: '/',
-    });
+    // Set refresh token as httpOnly cookie — JS cannot access it
+    res.cookie(
+      REFRESH_COOKIE_NAME,
+      refreshToken,
+      this.authService.getRefreshCookieOptions(),
+    );
 
+    // Return only accessToken + user in the body (no refreshToken exposed to JS)
     return { accessToken, user };
   }
 
   @Post(API_PATHS.AUTH.REFRESH)
+  @HttpCode(200)
   @ResponseMessage(RESPONSE_MESSAGES.REFRESH_SUCCESS)
   public async refresh(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const refreshToken = req.cookies['refresh_token'];
+    // Read refresh token from httpOnly cookie (not from request body)
+    const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME];
     if (!refreshToken) {
-      throw new UnauthorizedException('No refresh token provided');
+      // Clear any stale cookie and throw
+      res.clearCookie(REFRESH_COOKIE_NAME, { path: '/api/auth' });
+      throw new UnauthorizedException(RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN);
     }
 
     const deviceName = req.headers['user-agent'];
     const ipAddress = req.ip || (req.headers['x-forwarded-for'] as string);
-    const { accessToken, refreshToken: newRefreshToken } =
-      await this.authService.refreshTokens(
-        { refreshToken },
-        deviceName,
-        ipAddress,
+
+    try {
+      const { accessToken, refreshToken: newRefreshToken } =
+        await this.authService.refreshTokens(
+          { refreshToken },
+          deviceName,
+          ipAddress,
+        );
+
+      // Set new refresh token cookie (rotation)
+      res.cookie(
+        REFRESH_COOKIE_NAME,
+        newRefreshToken,
+        this.authService.getRefreshCookieOptions(),
       );
 
-    res.cookie('refresh_token', newRefreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      path: '/',
-    });
-
-    return { accessToken };
+      // Return only accessToken in the body
+      return { accessToken };
+    } catch (error) {
+      // On any refresh failure, clear the stale cookie
+      res.clearCookie(REFRESH_COOKIE_NAME, { path: '/api/auth' });
+      throw error;
+    }
   }
 
   @Post(API_PATHS.AUTH.LOGOUT)
@@ -101,16 +113,32 @@ export class AuthController {
   ) {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
+      res.clearCookie(REFRESH_COOKIE_NAME, { path: '/api/auth' });
       return null;
     }
     const accessToken = authHeader.split(' ')[1];
-    const refreshToken = req.cookies['refresh_token'];
+    const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME];
+
     await this.authService.logout(accessToken, refreshToken);
 
-    res.clearCookie('refresh_token', {
-      path: '/',
-    });
+    // Clear the refresh token cookie
+    res.clearCookie(REFRESH_COOKIE_NAME, { path: '/api/auth' });
     return null;
+  }
+
+  @Get(API_PATHS.AUTH.ME)
+  @UseGuards(JwtAuthGuard, SessionGuard)
+  @ResponseMessage('Session retrieved successfully')
+  public async getMe(@CurrentUser() user: JwtPayload) {
+    return this.authService.getMe(user.sub);
+  }
+
+  @Get(API_PATHS.AUTH.CSRF_TOKEN)
+  @UseGuards(JwtAuthGuard, SessionGuard)
+  @ResponseMessage('CSRF token generated')
+  public async getCsrfToken(@CurrentUser() user: JwtPayload) {
+    const token = await this.authService.generateCsrfToken(user.sub);
+    return { csrfToken: token };
   }
 
   @Get(API_PATHS.AUTH.VERIFY_MAGIC)

@@ -9,6 +9,8 @@ export const API_PATHS = {
     VERIFY_MAGIC: 'verify/magic',
     VERIFY_OTP: 'verify/otp',
     RESEND_VERIFICATION: 'resend-verification',
+    ME: 'me',
+    CSRF_TOKEN: 'csrf-token',
   },
   TENANTS: {
     ROOT: 'tenants',

@@ -5,7 +5,6 @@ import { AllConfig } from './config/config.interface';
 import { ValidationPipe } from '@nestjs/common';
 import { TransformInterceptor } from './core/interceptors/transform.interceptor';
 import { HttpExceptionFilter } from './core/filters/http-exception.filter';
-
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
