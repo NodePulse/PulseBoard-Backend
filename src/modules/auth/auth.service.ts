@@ -345,7 +345,7 @@ export class AuthService {
   // SERVICE
   public async getActiveSessions(
     userId: string,
-  ): Promise<Session[]> {
+  ): Promise<RefreshTokenSession[]> {
     return this.sessionRepository.find({
       where: {
         userId,
