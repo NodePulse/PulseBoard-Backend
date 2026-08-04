@@ -8,11 +8,14 @@ import { RedisModule } from './core/redis/redis.module';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 
+import { SessionModule } from './modules/session/session.module';
+
 @Module({
   imports: [
     AppConfigModule,
     DatabaseModule,
     RedisModule,
+    SessionModule,
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
@@ -21,6 +24,13 @@ import { ConfigService } from '@nestjs/config';
           port: configService.get<number>('redis.port'),
           password: configService.get<string>('redis.password'),
           tls: { servername: configService.get<string>('redis.host') },
+          maxRetriesPerRequest: null,
+          retryStrategy(times) {
+            console.warn(
+              `[BullMQ] Redis connection lost. Retrying connection (attempt ${times})...`,
+            );
+            return Math.min(times * 100, 10000);
+          },
         },
       }),
     }),
@@ -31,4 +41,4 @@ import { ConfigService } from '@nestjs/config';
   controllers: [],
   providers: [],
 })
-export class AppModule { }
+export class AppModule {}

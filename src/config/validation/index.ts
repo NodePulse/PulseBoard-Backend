@@ -1,3 +1,3 @@
-import envValidation from "./env.validation";
+import envValidation from './env.validation';
 
 export default envValidation;

@@ -17,7 +17,7 @@ export class MailService {
   constructor(
     @InjectQueue('mail-queue')
     private readonly mailQueue: Queue,
-  ) { }
+  ) {}
 
   async sendVerificationEmail(data: VerificationMailJob) {
     await this.mailQueue.add('send-verification', data, {

@@ -5,9 +5,9 @@ import { RedisConfig } from '../../config/config.interface';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
-  private client: Redis;
+  public client: Redis;
 
-  constructor(private readonly configService: ConfigService) { }
+  constructor(private readonly configService: ConfigService) {}
 
   onModuleInit() {
     const config = this.configService.get<RedisConfig>('redis');
@@ -20,8 +20,30 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       port: config.port,
       password: config.password || undefined,
       tls: {
-        servername: config.host
+        servername: config.host,
       },
+      retryStrategy(times) {
+        console.warn(
+          `[Redis] Connection lost. Retrying connection (attempt ${times})...`,
+        );
+        return Math.min(times * 100, 10000);
+      },
+    });
+
+    this.client.on('connect', () => {
+      console.log('[Redis] Client connection established.');
+    });
+
+    this.client.on('ready', () => {
+      console.log('[Redis] Client connection is ready.');
+    });
+
+    this.client.on('error', (err) => {
+      console.error('[Redis] Client error:', err);
+    });
+
+    this.client.on('close', () => {
+      console.warn('[Redis] Client connection closed.');
     });
   }
 

@@ -1,4 +1,10 @@
-import { Injectable, ConflictException, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  UnauthorizedException,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import { User, UserPlan } from '../users/entities/user.entity';
@@ -9,14 +15,18 @@ import { VerifyOtpDTO } from './dto/verifyOtp.dto';
 import { ResendVerificationDTO } from './dto/resendVerification.dto';
 import { RefreshTokenDTO } from './dto/refreshToken.dto';
 import * as bcrypt from 'bcrypt';
-import { RESPONSE_MESSAGES, VERIFICATION_METHODS } from '../../core/constants/messages';
+import {
+  RESPONSE_MESSAGES,
+  VERIFICATION_METHODS,
+} from '../../core/constants/messages';
 import { API_PATHS } from '../../core/constants/paths';
 import { UserRepository } from '../users/repositories/user.repository';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { randomUUID } from 'crypto';
+import { randomUUID, randomBytes, createHash } from 'crypto';
 import { RedisService } from 'src/core/redis/redis.service';
 import { MailService } from 'src/core/mail/mail.service';
+import { SessionCacheService } from '../session/session-cache.service';
 
 export interface JwtPayload {
   sub: string;
@@ -37,58 +47,83 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly redisService: RedisService,
     private readonly mailService: MailService,
-  ) { }
+    private readonly sessionCacheService: SessionCacheService,
+  ) {}
 
   // FUNC
-  private async generateTokens(user: User, familyId?: string) {
+  private async signAccessToken(
+    userId: string,
+    sessionId: string,
+    email: string,
+  ): Promise<string> {
     const accessTokenJti = randomUUID();
-    const refreshTokenJti = randomUUID();
-    const finalFamilyId = familyId || randomUUID();
-
     const accessSecret = this.configService.get<string>('jwt.accessSecret');
-    const refreshSecret = this.configService.get<string>('jwt.refreshSecret');
-    const accessExpiresIn = this.configService.get<string>('jwt.accessTokenExpiresIn');
-    const refreshExpiresIn = this.configService.get<string>('jwt.refreshTokenExpiresIn');
+    const accessExpiresIn = this.configService.get<string>(
+      'jwt.accessTokenExpiresIn',
+    );
 
-    const accessToken = await this.jwtService.signAsync(
-      { sub: user.id, email: user.email, jti: accessTokenJti },
+    return this.jwtService.signAsync(
+      { sub: userId, email, sid: sessionId, jti: accessTokenJti },
       { secret: accessSecret, expiresIn: accessExpiresIn as unknown as number },
     );
-
-    const refreshToken = await this.jwtService.signAsync(
-      { sub: user.id, email: user.email, jti: refreshTokenJti, familyId: finalFamilyId },
-      { secret: refreshSecret, expiresIn: refreshExpiresIn as unknown as number },
-    );
-
-    return { accessToken, refreshToken, accessTokenJti, refreshTokenJti, familyId: finalFamilyId };
   }
 
   // FUNC
-  private async createSession(
-    userId: string,
-    jti: string,
-    familyId: string,
-    expiresAt: Date,
-    deviceName?: string,
-    ipAddress?: string,
-  ) {
-    const session = this.sessionRepository.create({
-      userId,
-      jti,
-      familyId,
-      expiresAt,
-      deviceName: deviceName || null,
-      ipAddress: ipAddress || null,
-      revokedAt: null,
-    });
-    return this.sessionRepository.save(session);
+  private generateRefreshToken() {
+    const token = randomBytes(48).toString('base64url');
+    const hash = createHash('sha256').update(token).digest('hex');
+    return { token, hash };
+  }
+
+  // FUNC
+  private parseUserAgent(userAgentString?: string) {
+    if (!userAgentString) {
+      return { browser: 'Unknown', os: 'Unknown', device: 'Unknown' };
+    }
+
+    let browser = 'Unknown';
+    let os = 'Unknown';
+    let device = 'Desktop';
+
+    const ua = userAgentString.toLowerCase();
+
+    // Parse Browser
+    if (ua.includes('firefox')) {
+      browser = 'Firefox';
+    } else if (ua.includes('chrome') && !ua.includes('chromium')) {
+      browser = 'Chrome';
+    } else if (ua.includes('safari') && !ua.includes('chrome')) {
+      browser = 'Safari';
+    } else if (ua.includes('edge')) {
+      browser = 'Edge';
+    }
+
+    // Parse OS
+    if (ua.includes('windows')) {
+      os = 'Windows';
+    } else if (ua.includes('macintosh') || ua.includes('mac os')) {
+      os = 'macOS';
+    } else if (ua.includes('iphone') || ua.includes('ipad')) {
+      os = 'iOS';
+      device = ua.includes('iphone') ? 'iPhone' : 'iPad';
+    } else if (ua.includes('android')) {
+      os = 'Android';
+      device = 'Mobile Device';
+    } else if (ua.includes('linux')) {
+      os = 'Linux';
+    }
+
+    return { browser, os, device };
   }
 
   // SERVICE
   public async registerUser(dto: RegisterUserDTO): Promise<User> {
     const { email, firstName, lastName, password } = dto;
 
-    const existingUser = await this.userRepository.findByEmailAndTenant(email, null);
+    const existingUser = await this.userRepository.findByEmailAndTenant(
+      email,
+      null,
+    );
     if (existingUser) {
       throw new ConflictException(RESPONSE_MESSAGES.CONFLICT_EMAIL);
     }
@@ -130,7 +165,11 @@ export class AuthService {
     dto: LoginUserDTO,
     deviceName?: string,
     ipAddress?: string,
-  ): Promise<{ accessToken: string; refreshToken: string; user: Omit<User, 'passwordHash'> }> {
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: Omit<User, 'passwordHash'>;
+  }> {
     const { email, password } = dto;
 
     const user = await this.userRepository.findByEmailWithPassword(email, null);
@@ -138,13 +177,23 @@ export class AuthService {
       throw new UnauthorizedException(RESPONSE_MESSAGES.INVALID_CREDENTIALS);
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash || '');
+    const isUserActive = user.isActive;
+    if (!isUserActive) {
+      throw new UnauthorizedException(RESPONSE_MESSAGES.USER_INACTIVE);
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      password,
+      user.passwordHash || '',
+    );
     if (!isPasswordValid) {
       throw new UnauthorizedException(RESPONSE_MESSAGES.INVALID_CREDENTIALS);
     }
 
     if (!user.isEmailVerified) {
-      const isExpired = user.verificationExpiresAt ? new Date() > user.verificationExpiresAt : true;
+      const isExpired = user.verificationExpiresAt
+        ? new Date() > user.verificationExpiresAt
+        : true;
       const resendPath = `/api/${API_PATHS.AUTH.ROOT}/${API_PATHS.AUTH.RESEND_VERIFICATION}`;
       throw new UnauthorizedException({
         message: RESPONSE_MESSAGES.EMAIL_NOT_VERIFIED,
@@ -154,26 +203,71 @@ export class AuthService {
             {
               method: VERIFICATION_METHODS.MAGIC,
               path: resendPath,
-              body: { email: user.email, method: VERIFICATION_METHODS.MAGIC }
+              body: { email: user.email, method: VERIFICATION_METHODS.MAGIC },
             },
             {
               method: VERIFICATION_METHODS.OTP,
               path: resendPath,
-              body: { email: user.email, method: VERIFICATION_METHODS.OTP }
-            }
-          ]
-        }
+              body: { email: user.email, method: VERIFICATION_METHODS.OTP },
+            },
+          ],
+        },
       });
     }
 
-    // Generate tokens
-    const { accessToken, refreshToken, refreshTokenJti, familyId } = await this.generateTokens(user);
+    // Limit concurrent sessions to max 5 (Policy B: revoke oldest)
+    const maxSessions = 5;
+    const activeSessions = await this.sessionRepository.find({
+      where: {
+        userId: user.id,
+        status: 'ACTIVE',
+      },
+      order: {
+        lastUsedAt: 'ASC', // oldest first
+      },
+    });
 
-    // Calculate refresh token expiry date (7 days)
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    if (activeSessions.length >= maxSessions) {
+      const oldestSession = activeSessions[0];
+      oldestSession.status = 'REVOKED';
+      oldestSession.revokedAt = new Date();
+      await this.sessionRepository.save(oldestSession);
+      await this.sessionCacheService.invalidate(oldestSession.id, user.id);
+    }
+
+    // Generate opaque refresh token and its hash
+    const { token: refreshToken, hash: refreshTokenHash } =
+      this.generateRefreshToken();
+    const familyId = randomUUID();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    const uaParsed = this.parseUserAgent(deviceName);
 
     // Create session in database
-    await this.createSession(user.id, refreshTokenJti, familyId, expiresAt, deviceName, ipAddress);
+    const session = this.sessionRepository.create({
+      userId: user.id,
+      refreshTokenHash,
+      familyId,
+      status: 'ACTIVE',
+      deviceName: uaParsed.device || null,
+      browser: uaParsed.browser || null,
+      operatingSystem: uaParsed.os || null,
+      ipAddress: ipAddress || null,
+      userAgent: deviceName || null, // user agent passed in deviceName
+      expiresAt,
+    });
+
+    const savedSession = await this.sessionRepository.save(session);
+
+    // Sign access token with session ID (sid)
+    const accessToken = await this.signAccessToken(
+      user.id,
+      savedSession.id,
+      user.email,
+    );
+
+    // Cache the session in Redis
+    await this.sessionCacheService.set(savedSession);
 
     // Strip passwordHash from response
     const { passwordHash, ...userResponse } = user;
@@ -186,90 +280,173 @@ export class AuthService {
     dto: RefreshTokenDTO,
     deviceName?: string,
     ipAddress?: string,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: Omit<User, 'passwordHash'>;
+  }> {
     const { refreshToken } = dto;
+    const hash = createHash('sha256').update(refreshToken).digest('hex');
+    const lockKey = `refresh_lock:${hash}`;
 
-    let payload: JwtPayload;
+    // Acquire lock (3 seconds)
+    const locked = await this.redisService.client.set(
+      lockKey,
+      '1',
+      'PX',
+      3000,
+      'NX',
+    );
+    if (!locked) {
+      throw new ConflictException('Refresh already in progress');
+    }
+
     try {
-      payload = await this.jwtService.verifyAsync<JwtPayload>(refreshToken, {
-        secret: this.configService.get<string>('jwt.refreshSecret'),
+      const session = await this.sessionRepository.findOne({
+        where: { refreshTokenHash: hash },
       });
-    } catch (err) {
-      throw new UnauthorizedException(RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN);
-    }
 
-
-    const session = await this.sessionRepository.findOne({
-      where: { jti: payload.jti },
-    });
-
-    // Reuse detection / revocation
-    if (!session || session.revokedAt !== null) {
-      if (session) {
-        const sessionsToRevoke = await this.sessionRepository.find({
-          where: { familyId: session.familyId },
-        });
-        for (const s of sessionsToRevoke) {
-          s.revokedAt = new Date();
+      if (!session) {
+        // Reuse detection: check if this token was recently rotated
+        const reusedSessionId = await this.redisService.client.get(
+          `used_token:${hash}`,
+        );
+        if (reusedSessionId) {
+          // REUSE DETECTED -> Defensively revoke all sessions in the family
+          const reusedSession = await this.sessionRepository.findOne({
+            where: { id: reusedSessionId },
+          });
+          if (reusedSession) {
+            const familySessions = await this.sessionRepository.find({
+              where: { familyId: reusedSession.familyId },
+            });
+            for (const s of familySessions) {
+              s.status = 'REVOKED';
+              s.revokedAt = new Date();
+            }
+            await this.sessionRepository.save(familySessions);
+            for (const s of familySessions) {
+              await this.sessionCacheService.invalidate(s.id, s.userId);
+            }
+          }
+          throw new UnauthorizedException(
+            'Session compromised. Please log in again.',
+          );
         }
-        await this.sessionRepository.save(sessionsToRevoke);
+        throw new UnauthorizedException(RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN);
       }
-      throw new UnauthorizedException(RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN);
+
+      if (session.status !== 'ACTIVE' || session.expiresAt < new Date()) {
+        throw new UnauthorizedException(RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN);
+      }
+
+      // Rotate: generate new refresh token
+      const { token: newRefresh, hash: newHash } = this.generateRefreshToken();
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+      // Store current token in Redis as "used" for reuse detection (valid for 60 seconds)
+      await this.redisService.client.set(
+        `used_token:${hash}`,
+        session.id,
+        'EX',
+        60,
+      );
+
+      // Update database session record
+      session.refreshTokenHash = newHash;
+      session.expiresAt = expiresAt;
+      session.lastUsedAt = new Date();
+      if (deviceName) {
+        const uaParsed = this.parseUserAgent(deviceName);
+        session.deviceName = uaParsed.device || null;
+        session.browser = uaParsed.browser || null;
+        session.operatingSystem = uaParsed.os || null;
+        session.userAgent = deviceName;
+      }
+      if (ipAddress) {
+        session.ipAddress = ipAddress;
+      }
+
+      const updatedSession = await this.sessionRepository.save(session);
+
+      // Update cache
+      await this.sessionCacheService.set(updatedSession);
+
+      const user = await this.userRepository.findOne({
+        where: { id: session.userId },
+      });
+      if (!user) {
+        throw new UnauthorizedException(RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN);
+      }
+
+      // Sign access token with new jti, same sid
+      const accessToken = await this.signAccessToken(
+        user.id,
+        session.id,
+        user.email,
+      );
+
+      const { passwordHash, ...userResponse } = user;
+
+      return {
+        accessToken,
+        refreshToken: newRefresh,
+        user: userResponse,
+      };
+    } finally {
+      // Release lock
+      await this.redisService.client.del(lockKey);
     }
-
-    // Mark old session as revoked
-    session.revokedAt = new Date();
-    await this.sessionRepository.save(session);
-
-
-    // Find the user
-    const user = await this.userRepository.findOne({ where: { id: payload.sub } });
-    if (!user) {
-      throw new UnauthorizedException(RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN);
-    }
-
-    // Generate new tokens under the same familyId
-    const tokens = await this.generateTokens(user, session.familyId);
-
-    // Create a new session in database
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    await this.createSession(user.id, tokens.refreshTokenJti, tokens.familyId, expiresAt, deviceName, ipAddress);
-
-    return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
   }
 
   // SERVICE
-  public async logout(accessToken: string, refreshToken?: string): Promise<void> {
-    // 1. Blacklist access token
+  public async logout(
+    accessToken: string,
+    refreshToken?: string,
+  ): Promise<void> {
+    let sessionId: string | undefined;
+    let userId: string | undefined;
+
     try {
-      const accessPayload = await this.jwtService.verifyAsync<JwtPayload>(accessToken, {
-        secret: this.configService.get<string>('jwt.accessSecret'),
-        ignoreExpiration: true,
-      });
-      const accessTtl = Math.max(0, Math.floor(((accessPayload.exp || 0) * 1000 - Date.now()) / 1000));
-      if (accessTtl > 0) {
-        await this.redisService.set(`blacklist:${accessPayload.jti}`, 'logout', accessTtl);
-      }
+      const accessPayload = await this.jwtService.verifyAsync<JwtPayload>(
+        accessToken,
+        {
+          secret: this.configService.get<string>('jwt.accessSecret'),
+          ignoreExpiration: true,
+        },
+      );
+      sessionId = (accessPayload as any).sid;
+      userId = accessPayload.sub;
     } catch (err) {
-      // Ignore invalid access token
+      // Ignore verify error
     }
 
-    // 2. Blacklist refresh token and revoke database session
+    if (sessionId && userId) {
+      const session = await this.sessionRepository.findOne({
+        where: { id: sessionId },
+      });
+      if (session) {
+        session.status = 'REVOKED';
+        session.revokedAt = new Date();
+        await this.sessionRepository.save(session);
+        await this.sessionCacheService.invalidate(sessionId, userId);
+      }
+    }
+
     if (refreshToken) {
       try {
-        const refreshPayload = await this.jwtService.verifyAsync<JwtPayload>(refreshToken, {
-          secret: this.configService.get<string>('jwt.refreshSecret'),
-          ignoreExpiration: true,
+        const hash = createHash('sha256').update(refreshToken).digest('hex');
+        const session = await this.sessionRepository.findOne({
+          where: { refreshTokenHash: hash },
         });
-
-        // Revoke in database
-        await this.sessionRepository.update(
-          { jti: refreshPayload.jti },
-          { revokedAt: new Date() },
-        );
-
+        if (session) {
+          session.status = 'REVOKED';
+          session.revokedAt = new Date();
+          await this.sessionRepository.save(session);
+          await this.sessionCacheService.invalidate(session.id, session.userId);
+        }
       } catch (err) {
-        // Ignore invalid refresh token
+        // Ignore errors
       }
     }
   }
@@ -331,7 +508,9 @@ export class AuthService {
   }
 
   // SERVICE
-  public async resendVerification(dto: ResendVerificationDTO): Promise<{ message: string }> {
+  public async resendVerification(
+    dto: ResendVerificationDTO,
+  ): Promise<{ message: string }> {
     const { email, method } = dto;
 
     const user = await this.userRepository.findByEmailAndTenant(email, null);
@@ -354,7 +533,7 @@ export class AuthService {
       user.verificationOtp = null;
       const frontendUrl = this.configService.get<string>('app.frontendUrl');
       magicLink = `${frontendUrl}/verify-magic?token=${verificationToken}`;
-      
+
       await this.mailService.sendVerificationEmail({
         to: email,
         magicLink,
@@ -364,7 +543,9 @@ export class AuthService {
       user.verificationExpiresAt = verificationExpiresAt;
       await this.userRepository.save(user);
     } else {
-      const verificationOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      const verificationOtp = Math.floor(
+        100000 + Math.random() * 900000,
+      ).toString();
       await this.redisService.set(`otp:${email}`, verificationOtp, 300); // 5 minutes TTL
     }
 
@@ -372,11 +553,13 @@ export class AuthService {
   }
 
   // SERVICE
-  public async getActiveSessions(userId: string): Promise<RefreshTokenSession[]> {
+  public async getActiveSessions(
+    userId: string,
+  ): Promise<RefreshTokenSession[]> {
     return this.sessionRepository.find({
       where: {
         userId,
-        revokedAt: IsNull(),
+        status: 'ACTIVE',
       },
       order: {
         createdAt: 'DESC',
@@ -394,10 +577,27 @@ export class AuthService {
       throw new NotFoundException('Session not found');
     }
 
+    session.status = 'REVOKED';
     session.revokedAt = new Date();
     await this.sessionRepository.save(session);
 
-    // Also blacklist the jti in Redis (set a default TTL of 7 days)
-    await this.redisService.set(`blacklist:${session.jti}`, 'revoked', 7 * 24 * 60 * 60);
+    // Invalidate Redis cache
+    await this.sessionCacheService.invalidate(sessionId, userId);
+  }
+
+  // SERVICE
+  public async logoutAll(userId: string): Promise<void> {
+    const activeSessions = await this.sessionRepository.find({
+      where: { userId, status: 'ACTIVE' },
+    });
+
+    for (const s of activeSessions) {
+      s.status = 'REVOKED';
+      s.revokedAt = new Date();
+    }
+    await this.sessionRepository.save(activeSessions);
+
+    // Invalidate Redis cache
+    await this.sessionCacheService.invalidateAllForUser(userId);
   }
 }

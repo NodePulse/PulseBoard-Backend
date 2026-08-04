@@ -1,4 +1,10 @@
-import { Controller, Post, Body, Headers, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Headers,
+  BadRequestException,
+} from '@nestjs/common';
 import { TenantsService } from './tenants.service';
 import { CreateTenantDTO } from './dto/create-tenant.dto';
 import { API_PATHS } from '../../core/constants/paths';

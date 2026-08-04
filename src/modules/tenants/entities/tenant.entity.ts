@@ -1,14 +1,21 @@
-import { Column, CreateDateColumn, DeleteDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import {
+  Column,
+  CreateDateColumn,
+  DeleteDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 export enum TenantPlan {
-  FREE = "free",
-  PRO = "pro",
-  ENTERPRISE = "enterprise",
+  FREE = 'free',
+  PRO = 'pro',
+  ENTERPRISE = 'enterprise',
 }
 
-@Entity("tenants")
+@Entity('tenants')
 export class Tenant {
-  @PrimaryGeneratedColumn("uuid")
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ length: 255, nullable: false })
@@ -18,21 +25,21 @@ export class Tenant {
   slug: string;
 
   @Column({
-    type: "enum",
+    type: 'enum',
     enum: TenantPlan,
     default: TenantPlan.FREE,
   })
   plan: TenantPlan;
 
-  @Column({ type: "jsonb", nullable: true, default: {} })
+  @Column({ type: 'jsonb', nullable: true, default: {} })
   settings: Record<string, unknown>;
 
-  @CreateDateColumn({ type: "timestamptz", name: "created_at" })
+  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: "timestamptz", name: "updated_at" })
+  @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
   updatedAt: Date;
 
-  @DeleteDateColumn({ type: "timestamptz", name: "deleted_at", nullable: true })
+  @DeleteDateColumn({ type: 'timestamptz', name: 'deleted_at', nullable: true })
   deletedAt: Date | null;
 }

@@ -1,4 +1,9 @@
-import { Injectable, ForbiddenException, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Tenant } from './entities/tenant.entity';
@@ -15,7 +20,10 @@ export class TenantsService {
     private readonly userRepository: UserRepository,
   ) {}
 
-  public async createTenant(userId: string, dto: CreateTenantDTO): Promise<Tenant> {
+  public async createTenant(
+    userId: string,
+    dto: CreateTenantDTO,
+  ): Promise<Tenant> {
     const { name, slug } = dto;
 
     // 1. Find user
@@ -30,7 +38,9 @@ export class TenantsService {
     }
 
     // 3. Check if slug is already taken
-    const existingTenant = await this.tenantRepository.findOne({ where: { slug } });
+    const existingTenant = await this.tenantRepository.findOne({
+      where: { slug },
+    });
     if (existingTenant) {
       throw new ConflictException(RESPONSE_MESSAGES.TENANT_SLUG_CONFLICT);
     }

@@ -1,4 +1,10 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { Request, Response } from 'express';
 import { RESPONSE_MESSAGES } from '../constants/messages';
 
@@ -22,12 +28,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
       const res = exception.getResponse();
       if (typeof res === 'object' && res !== null) {
         const resObj = res as Record<string, unknown>;
-        message = typeof resObj.message === 'string' || Array.isArray(resObj.message)
-          ? (resObj.message as string | string[])
-          : exception.message;
-        error = typeof resObj.error === 'string'
-          ? resObj.error.toUpperCase()
-          : exception.name.toUpperCase();
+        message =
+          typeof resObj.message === 'string' || Array.isArray(resObj.message)
+            ? (resObj.message as string | string[])
+            : exception.message;
+        error =
+          typeof resObj.error === 'string'
+            ? resObj.error.toUpperCase()
+            : exception.name.toUpperCase();
         data = resObj.data;
       } else {
         message = typeof res === 'string' ? res : exception.message;

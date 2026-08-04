@@ -1,5 +1,15 @@
-import { Column, CreateDateColumn, DeleteDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
-import { Tenant } from "../../tenants/entities/tenant.entity";
+import {
+  Column,
+  CreateDateColumn,
+  DeleteDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+import { Tenant } from '../../tenants/entities/tenant.entity';
 
 export enum WorkspaceRole {
   OWNER = 'owner',
@@ -24,7 +34,7 @@ export class User {
   tenantId: string | null;
 
   @ManyToOne(() => Tenant, { onDelete: 'CASCADE', nullable: true })
-  @JoinColumn({ name: "tenant_id" })
+  @JoinColumn({ name: 'tenant_id' })
   tenant: Tenant | null;
 
   @Column({ length: 50, nullable: false })
@@ -53,7 +63,11 @@ export class User {
   @Column({ name: 'verification_otp', length: 6, nullable: true })
   verificationOtp: string | null;
 
-  @Column({ name: 'verification_expires_at', type: 'timestamptz', nullable: true })
+  @Column({
+    name: 'verification_expires_at',
+    type: 'timestamptz',
+    nullable: true,
+  })
   verificationExpiresAt: Date | null;
 
   @Column({
@@ -74,12 +88,12 @@ export class User {
   @Column({ nullable: true, default: true })
   isActive: boolean;
 
-  @CreateDateColumn({ type: 'timestamptz', name: "created_at" })
+  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz', name: "updated_at" })
+  @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
   updatedAt: Date;
 
-  @DeleteDateColumn({ type: 'timestamptz', name: "deleted_at", nullable: true })
+  @DeleteDateColumn({ type: 'timestamptz', name: 'deleted_at', nullable: true })
   deletedAt: Date | null;
 }

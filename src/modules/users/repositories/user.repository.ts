@@ -8,7 +8,10 @@ export class UserRepository extends Repository<User> {
     super(User, dataSource.createEntityManager());
   }
 
-  public async findByEmailAndTenant(email: string, tenantId: string | null): Promise<User | null> {
+  public async findByEmailAndTenant(
+    email: string,
+    tenantId: string | null,
+  ): Promise<User | null> {
     return this.findOne({
       where: {
         email,
@@ -17,7 +20,10 @@ export class UserRepository extends Repository<User> {
     });
   }
 
-  public async findByEmailWithPassword(email: string, tenantId: string | null): Promise<User | null> {
+  public async findByEmailWithPassword(
+    email: string,
+    tenantId: string | null,
+  ): Promise<User | null> {
     return this.findOne({
       where: {
         email,

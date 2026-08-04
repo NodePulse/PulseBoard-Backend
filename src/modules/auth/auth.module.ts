@@ -7,15 +7,18 @@ import { RefreshTokenSession } from './entities/refresh-token-session.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { MailModule } from '../../core/mail/mail.module';
 
+import { SessionModule } from '../session/session.module';
+
 @Module({
   imports: [
     UsersModule,
     TypeOrmModule.forFeature([RefreshTokenSession]),
     JwtModule.register({}),
     MailModule,
+    SessionModule,
   ],
   controllers: [AuthController],
   providers: [AuthService],
   exports: [AuthService],
 })
-export class AuthModule { }
+export class AuthModule {}
