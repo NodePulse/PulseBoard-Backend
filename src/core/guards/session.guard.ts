@@ -13,17 +13,19 @@ export class SessionGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const user = request.user;
+    
+    const sessionId = request.cookies?.['pulseboard_session'];
 
-    if (!user || !user.sid) {
+    if (!sessionId) {
       throw new UnauthorizedException(RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN);
     }
 
-    const session = await this.sessionCacheService.get(user.sid);
+    const session = await this.sessionCacheService.get(sessionId);
     if (!session || session.status !== 'ACTIVE') {
       throw new UnauthorizedException('Session revoked or inactive');
     }
 
+    request.user = { sub: session.userId, sid: session.id };
     request.session = session;
     return true;
   }

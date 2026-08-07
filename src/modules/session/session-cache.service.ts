@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RedisService } from '../../core/redis/redis.service';
-import { RefreshTokenSession } from '../auth/entities/refresh-token-session.entity';
+import { Session } from '../auth/entities/session.entity';
 
 export interface CachedSession {
   id: string;
@@ -16,8 +16,8 @@ export interface CachedSession {
 export class SessionCacheService {
   constructor(
     private readonly redisService: RedisService,
-    @InjectRepository(RefreshTokenSession)
-    private readonly sessionRepository: Repository<RefreshTokenSession>,
+    @InjectRepository(Session)
+    private readonly sessionRepository: Repository<Session>,
   ) {}
 
   private getSessionKey(sessionId: string): string {
@@ -28,7 +28,7 @@ export class SessionCacheService {
     return `user_sessions:${userId}`;
   }
 
-  async set(session: RefreshTokenSession): Promise<void> {
+  async set(session: Session): Promise<void> {
     const key = this.getSessionKey(session.id);
     const userKey = this.getUserSessionsKey(session.userId);
 

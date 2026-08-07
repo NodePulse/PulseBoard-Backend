@@ -9,8 +9,8 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
-@Entity('refresh_token_sessions')
-export class RefreshTokenSession {
+@Entity('sessions')
+export class Session {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -20,12 +20,6 @@ export class RefreshTokenSession {
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
-
-  @Column({ name: 'refresh_token_hash', length: 64, unique: true })
-  refreshTokenHash: string;
-
-  @Column({ name: 'family_id', length: 64 })
-  familyId: string;
 
   @Column({ name: 'status', length: 10, default: 'ACTIVE' })
   status: string; // 'ACTIVE' | 'REVOKED' | 'EXPIRED'
