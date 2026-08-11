@@ -9,7 +9,10 @@ import { BullModule } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 
 import { SessionModule } from './modules/session/session.module';
-
+import { PaymentsModule } from './modules/payments/payments.module';
+import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
+import { OrdersModule } from './modules/orders/orders.module';
+import { TransactionsModule } from './modules/transactions/transactions.module';
 @Module({
   imports: [
     AppConfigModule,
@@ -37,6 +40,10 @@ import { SessionModule } from './modules/session/session.module';
     UsersModule,
     TenantsModule,
     AuthModule,
+    PaymentsModule,
+    SubscriptionsModule,
+    OrdersModule,
+    TransactionsModule,
   ],
   controllers: [],
   providers: [],

@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User, UserPlan } from '../users/entities/user.entity';
+import { User } from '../users/entities/user.entity';
 import { Session } from './entities/session.entity';
 import { RegisterUserDTO } from './dto/registerUser.dto';
 import { LoginUserDTO } from './dto/loginUser.dto';
@@ -103,7 +103,6 @@ export class AuthService {
       passwordHash,
       firstName,
       lastName,
-      plan: UserPlan.FREE,
       tenantId: null,
       isEmailVerified: false,
       verificationToken,
@@ -343,9 +342,7 @@ export class AuthService {
   }
 
   // SERVICE
-  public async getActiveSessions(
-    userId: string,
-  ): Promise<RefreshTokenSession[]> {
+  public async getActiveSessions(userId: string): Promise<Session[]> {
     return this.sessionRepository.find({
       where: {
         userId,

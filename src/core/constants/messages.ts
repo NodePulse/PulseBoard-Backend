@@ -22,6 +22,12 @@ export const RESPONSE_MESSAGES = {
   UNAUTHORIZED_TOKEN: 'Invalid or expired authorization token.',
   USER_INACTIVE:
     'Your account is inactive. Please contact support for assistance.',
+  PAYMENTS: {
+    PLAN_NOT_FOUND: 'Subscription plan not found',
+    PLAN_INACTIVE: 'This subscription plan is currently unavailable',
+    INVALID_AMOUNT: 'Invalid subscription plan amount',
+    ORDER_NOT_FOUND: 'We couldn’t find your payment order. Please try again.',
+  },
 };
 
 export const VALIDATION_MESSAGES = {

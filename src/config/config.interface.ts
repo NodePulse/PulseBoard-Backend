@@ -30,10 +30,17 @@ export interface MailConfig {
   fromEmail: string;
 }
 
+export interface RazorpayConfig {
+  keyId: string;
+  secret: string;
+  // webhookSecret: string;
+}
+
 export interface AllConfig {
   app: AppConfig;
   database: DatabaseConfig;
   jwt: JwtConfig;
   redis: RedisConfig;
   mail: MailConfig;
+  razorpay: RazorpayConfig;
 }

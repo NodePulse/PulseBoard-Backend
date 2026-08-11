@@ -18,11 +18,7 @@ export enum WorkspaceRole {
   VIEWER = 'viewer',
 }
 
-export enum UserPlan {
-  FREE = 'free',
-  PRO = 'pro',
-  ENTERPRISE = 'enterprise',
-}
+
 
 @Entity('users')
 @Index(['tenantId', 'email'], { unique: true })
@@ -78,12 +74,6 @@ export class User {
   })
   workspaceRole: WorkspaceRole;
 
-  @Column({
-    type: 'enum',
-    enum: UserPlan,
-    default: UserPlan.FREE,
-  })
-  plan: UserPlan;
 
   @Column({ nullable: true, default: true })
   isActive: boolean;

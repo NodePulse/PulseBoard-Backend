@@ -42,7 +42,6 @@ export class UserRepository extends Repository<User> {
         verificationOtp: true,
         verificationExpiresAt: true,
         workspaceRole: true,
-        plan: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,

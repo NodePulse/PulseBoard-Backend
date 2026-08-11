@@ -7,10 +7,11 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Tenant } from './entities/tenant.entity';
-import { User, UserPlan, WorkspaceRole } from '../users/entities/user.entity';
+import { User, WorkspaceRole } from '../users/entities/user.entity';
 import { CreateTenantDTO } from './dto/create-tenant.dto';
 import { RESPONSE_MESSAGES } from '../../core/constants/messages';
 import { UserRepository } from '../users/repositories/user.repository';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 
 @Injectable()
 export class TenantsService {
@@ -18,6 +19,7 @@ export class TenantsService {
     @InjectRepository(Tenant)
     private readonly tenantRepository: Repository<Tenant>,
     private readonly userRepository: UserRepository,
+    private readonly subscriptionsService: SubscriptionsService,
   ) {}
 
   public async createTenant(
@@ -33,7 +35,8 @@ export class TenantsService {
     }
 
     // 2. Business rule check: "any user not able to make a tenant if that user have not any plan other than free"
-    if (user.plan === UserPlan.FREE) {
+    const activeSubscription = await this.subscriptionsService.getActiveSubscription(userId);
+    if (!activeSubscription) {
       throw new ForbiddenException(RESPONSE_MESSAGES.FREE_PLAN_RESTRICTION);
     }
 
