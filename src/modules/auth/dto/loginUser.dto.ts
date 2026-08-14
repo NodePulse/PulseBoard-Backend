@@ -7,8 +7,16 @@ import {
 } from 'class-validator';
 import { VALIDATION_MESSAGES } from '../../../core/constants/messages';
 import { VALIDATION_LIMITS } from '../../../core/constants/limits';
+import { ApiProperty } from '@nestjs/swagger';
+import { User } from '../../users/entities/user.entity';
 
 export class LoginUserDTO {
+  @ApiProperty({
+    description: 'Email of the user',
+    example: 'user@yopmail.com',
+    type: 'string',
+    required: true,
+  })
   @IsEmail({}, { message: VALIDATION_MESSAGES.EMAIL('Email') })
   @MaxLength(VALIDATION_LIMITS.EMAIL.MAX, {
     message: VALIDATION_MESSAGES.MAX_LENGTH(
@@ -19,6 +27,12 @@ export class LoginUserDTO {
   @IsNotEmpty({ message: VALIDATION_MESSAGES.REQUIRED('Email') })
   email: string;
 
+  @ApiProperty({
+    description: 'Password of the user',
+    example: 'password@123',
+    type: 'string',
+    required: true,
+  })
   @IsString({ message: VALIDATION_MESSAGES.MUST_BE_STRING('Password') })
   @MinLength(VALIDATION_LIMITS.PASSWORD.MIN, {
     message: VALIDATION_MESSAGES.MIN_LENGTH(

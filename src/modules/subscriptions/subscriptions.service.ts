@@ -40,7 +40,9 @@ export class SubscriptionsService {
     return this.subscriptionRepository.save(subscription);
   }
 
-  public async getActiveSubscription(userId: string): Promise<Subscription | null> {
+  public async getActiveSubscription(
+    userId: string,
+  ): Promise<Subscription | null> {
     return this.subscriptionRepository.findOne({
       where: { userId, status: SubscriptionStatus.ACTIVE },
     });

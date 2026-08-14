@@ -35,7 +35,8 @@ export class TenantsService {
     }
 
     // 2. Business rule check: "any user not able to make a tenant if that user have not any plan other than free"
-    const activeSubscription = await this.subscriptionsService.getActiveSubscription(userId);
+    const activeSubscription =
+      await this.subscriptionsService.getActiveSubscription(userId);
     if (!activeSubscription) {
       throw new ForbiddenException(RESPONSE_MESSAGES.FREE_PLAN_RESTRICTION);
     }

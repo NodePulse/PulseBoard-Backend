@@ -136,7 +136,9 @@ export class AuthService {
 
     const user = await this.userRepository.findByEmailWithPassword(email, null);
     if (!user) {
-      throw new UnauthorizedException(RESPONSE_MESSAGES.INVALID_CREDENTIALS);
+      throw new UnauthorizedException(
+        RESPONSE_MESSAGES.AUTH.INVALID_CREDENTIALS,
+      );
     }
 
     const isUserActive = user.isActive;
@@ -149,7 +151,9 @@ export class AuthService {
       user.passwordHash || '',
     );
     if (!isPasswordValid) {
-      throw new UnauthorizedException(RESPONSE_MESSAGES.INVALID_CREDENTIALS);
+      throw new UnauthorizedException(
+        RESPONSE_MESSAGES.AUTH.INVALID_CREDENTIALS,
+      );
     }
 
     if (!user.isEmailVerified) {

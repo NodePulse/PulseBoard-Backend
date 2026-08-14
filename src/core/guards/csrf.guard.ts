@@ -1,4 +1,9 @@
-import { CanActivate, ExecutionContext, Injectable, ForbiddenException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  ForbiddenException,
+} from '@nestjs/common';
 import { AuthService } from '../../modules/auth/auth.service';
 
 /**
@@ -30,7 +35,10 @@ export class CsrfGuard implements CanActivate {
       throw new ForbiddenException('CSRF token missing');
     }
 
-    const isValid = await this.authService.validateCsrfToken(user.sub, csrfToken);
+    const isValid = await this.authService.validateCsrfToken(
+      user.sub,
+      csrfToken,
+    );
     if (!isValid) {
       throw new ForbiddenException('CSRF token invalid or expired');
     }

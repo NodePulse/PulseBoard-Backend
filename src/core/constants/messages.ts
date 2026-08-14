@@ -1,4 +1,12 @@
 export const RESPONSE_MESSAGES = {
+  AUTH: {
+    LOGIN_SUCCESS: 'Login successful',
+    VALIDATION_ERROR: 'Validation failed',
+    INVALID_CREDENTIALS: 'Invalid email or password.',
+    FORBIDDEN:
+      'Your account is inactive. Please contact support for assistance.',
+    TOO_MANY_REQUESTS: 'Too many login attempts - rate limited.',
+  },
   SUCCESS: 'Request successful',
   INTERNAL_SERVER_ERROR: 'Internal server error',
   CONFLICT_EMAIL: 'Email is already registered',
@@ -10,7 +18,6 @@ export const RESPONSE_MESSAGES = {
   USER_REGISTERED: 'User registered successfully',
   TENANT_CREATED: 'Tenant created successfully',
   EMAIL_NOT_VERIFIED: 'Your email is not verified.',
-  INVALID_CREDENTIALS: 'Invalid email or password.',
   VERIFICATION_EXPIRED: 'Verification token or OTP has expired.',
   VERIFICATION_INVALID: 'Invalid verification token or OTP.',
   VERIFICATION_SUCCESS: 'Email verified successfully.',

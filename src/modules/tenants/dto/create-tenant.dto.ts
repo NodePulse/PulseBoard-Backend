@@ -2,8 +2,15 @@ import { IsNotEmpty, IsString, Matches, MaxLength } from 'class-validator';
 import { VALIDATION_MESSAGES } from '../../../core/constants/messages';
 import { VALIDATION_LIMITS } from '../../../core/constants/limits';
 import { REGEX_PATTERNS } from '../../../core/constants/regex';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateTenantDTO {
+  @ApiProperty({
+    description: 'Name of the tenant',
+    example: 'Tenant',
+    type: 'string',
+    required: true,
+  })
   @IsString({ message: VALIDATION_MESSAGES.MUST_BE_STRING('Tenant name') })
   @MaxLength(VALIDATION_LIMITS.TENANT_NAME.MAX, {
     message: VALIDATION_MESSAGES.MAX_LENGTH(

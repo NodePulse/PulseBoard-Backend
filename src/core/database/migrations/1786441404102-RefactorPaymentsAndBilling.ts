@@ -1,125 +1,304 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class RefactorPaymentsAndBilling1786441404102 implements MigrationInterface {
-    name = 'RefactorPaymentsAndBilling1786441404102'
+export class RefactorPaymentsAndBilling1786441404102
+  implements MigrationInterface
+{
+  name = 'RefactorPaymentsAndBilling1786441404102';
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`DELETE FROM "payments"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_d35cb3c13a18e1ea1705b2817b"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_487700240ef0deb9acf13f5a37"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_0d65ce2454954e71c67ea424c4"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_98a04cdcbac4f6a2c55c7d1935"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_5e9210b4560e083026af787ec3"`);
-        await queryRunner.query(`CREATE TYPE "public"."transactions_type_enum" AS ENUM('CREDIT', 'DEBIT')`);
-        await queryRunner.query(`CREATE TABLE "transactions" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "payment_id" uuid NOT NULL, "user_id" uuid NOT NULL, "tenant_id" uuid, "type" "public"."transactions_type_enum" NOT NULL, "amount" bigint NOT NULL, "currency" character varying(3) NOT NULL, "description" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_a219afd8dd77ed80f5a862f1db9" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_e9acc6efa76de013e8c1553ed2" ON "transactions"  ("user_id") `);
-        await queryRunner.query(`CREATE TYPE "public"."orders_status_enum" AS ENUM('PENDING', 'COMPLETED', 'FAILED', 'CANCELLED')`);
-        await queryRunner.query(`CREATE TABLE "orders" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "user_id" uuid NOT NULL, "tenant_id" uuid, "amount" bigint NOT NULL, "currency" character varying(3) NOT NULL, "status" "public"."orders_status_enum" NOT NULL DEFAULT 'PENDING', "razorpay_order_id" character varying(255), "plan" character varying(100), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_710e2d4957aa5878dfe94e4ac2f" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_a922b820eeef29ac1c6800e826" ON "orders"  ("user_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_a493914f314964159c6fb6fe5f" ON "orders"  ("razorpay_order_id") `);
-        await queryRunner.query(`CREATE TYPE "public"."subscriptions_plan_enum" AS ENUM('BASIC', 'PREMIUM', 'PRO')`);
-        await queryRunner.query(`CREATE TYPE "public"."subscriptions_status_enum" AS ENUM('ACTIVE', 'CANCELLED', 'PAST_DUE')`);
-        await queryRunner.query(`CREATE TABLE "subscriptions" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "user_id" uuid NOT NULL, "tenant_id" uuid, "plan" "public"."subscriptions_plan_enum" NOT NULL, "status" "public"."subscriptions_status_enum" NOT NULL DEFAULT 'ACTIVE', "current_period_start" TIMESTAMP WITH TIME ZONE NOT NULL, "current_period_end" TIMESTAMP WITH TIME ZONE NOT NULL, "cancel_at_period_end" boolean NOT NULL DEFAULT false, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_a87248d73155605cf782be9ee5e" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE INDEX "IDX_d0a95ef8a28188364c546eb65c" ON "subscriptions"  ("user_id") `);
-        await queryRunner.query(`ALTER TABLE "users" DROP COLUMN "plan"`);
-        await queryRunner.query(`DROP TYPE "public"."users_plan_enum"`);
-        await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "userId"`);
-        await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "tenantId"`);
-        await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "plan"`);
-        await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "razorpayOrderId"`);
-        await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "razorpayPaymentId"`);
-        await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "razorpaySignature"`);
-        await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "transactionId"`);
-        await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "subscriptionId"`);
-        await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "createdAt"`);
-        await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "updatedAt"`);
-        await queryRunner.query(`ALTER TABLE "payments" ADD "user_id" uuid NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "payments" ADD "order_id" uuid NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "payments" ADD CONSTRAINT "UQ_b2f7b823a21562eeca20e72b006" UNIQUE ("order_id")`);
-        await queryRunner.query(`ALTER TABLE "payments" ADD "razorpay_payment_id" character varying(255)`);
-        await queryRunner.query(`ALTER TABLE "payments" ADD "razorpay_signature" character varying(512)`);
-        await queryRunner.query(`ALTER TABLE "payments" ADD "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()`);
-        await queryRunner.query(`ALTER TABLE "payments" ADD "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()`);
-        await queryRunner.query(`ALTER TYPE "public"."payments_status_enum" RENAME TO "payments_status_enum_old"`);
-        await queryRunner.query(`CREATE TYPE "public"."payments_status_enum" AS ENUM('PENDING', 'SUCCEEDED', 'FAILED', 'REFUNDED', 'CANCELLED')`);
-        await queryRunner.query(`ALTER TABLE "payments" ALTER COLUMN "status" DROP DEFAULT`);
-        await queryRunner.query(`ALTER TABLE "payments" ALTER COLUMN "status" TYPE "public"."payments_status_enum" USING "status"::"text"::"public"."payments_status_enum"`);
-        await queryRunner.query(`ALTER TABLE "payments" ALTER COLUMN "status" SET DEFAULT 'PENDING'`);
-        await queryRunner.query(`DROP TYPE "public"."payments_status_enum_old"`);
-        await queryRunner.query(`ALTER TYPE "public"."payments_paymentmethod_enum" RENAME TO "payments_paymentmethod_enum_old"`);
-        await queryRunner.query(`CREATE TYPE "public"."payments_paymentmethod_enum" AS ENUM('RAZORPAY', 'CARD', 'BANK_TRANSFER', 'WALLET')`);
-        await queryRunner.query(`ALTER TABLE "payments" ALTER COLUMN "paymentMethod" TYPE "public"."payments_paymentmethod_enum" USING "paymentMethod"::"text"::"public"."payments_paymentmethod_enum"`);
-        await queryRunner.query(`DROP TYPE "public"."payments_paymentmethod_enum_old"`);
-        await queryRunner.query(`CREATE INDEX "IDX_e7d1bec5311dcddd28c50547e8" ON "payments"  ("razorpay_payment_id") `);
-        await queryRunner.query(`CREATE INDEX "IDX_c2a89b63635ae2b4cc76f17a08" ON "payments"  ("user_id", "status") `);
-        await queryRunner.query(`ALTER TABLE "transactions" ADD CONSTRAINT "FK_464da95dc8a05470b2b158d4df6" FOREIGN KEY ("payment_id") REFERENCES "payments"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "transactions" ADD CONSTRAINT "FK_e9acc6efa76de013e8c1553ed2b" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "transactions" ADD CONSTRAINT "FK_4f27188c6c1d993bc76aeddcded" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "payments" ADD CONSTRAINT "FK_427785468fb7d2733f59e7d7d39" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "payments" ADD CONSTRAINT "FK_b2f7b823a21562eeca20e72b006" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "orders" ADD CONSTRAINT "FK_a922b820eeef29ac1c6800e826a" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "orders" ADD CONSTRAINT "FK_527dd6efd5f3402f729c6b3e826" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "subscriptions" ADD CONSTRAINT "FK_d0a95ef8a28188364c546eb65c1" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "subscriptions" ADD CONSTRAINT "FK_f6ac03431c311ccb8bbd7d3af18" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
-    }
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`DELETE FROM "payments"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_d35cb3c13a18e1ea1705b2817b"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_487700240ef0deb9acf13f5a37"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_0d65ce2454954e71c67ea424c4"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_98a04cdcbac4f6a2c55c7d1935"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_5e9210b4560e083026af787ec3"`,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."transactions_type_enum" AS ENUM('CREDIT', 'DEBIT')`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "transactions" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "payment_id" uuid NOT NULL, "user_id" uuid NOT NULL, "tenant_id" uuid, "type" "public"."transactions_type_enum" NOT NULL, "amount" bigint NOT NULL, "currency" character varying(3) NOT NULL, "description" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_a219afd8dd77ed80f5a862f1db9" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_e9acc6efa76de013e8c1553ed2" ON "transactions"  ("user_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."orders_status_enum" AS ENUM('PENDING', 'COMPLETED', 'FAILED', 'CANCELLED')`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "orders" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "user_id" uuid NOT NULL, "tenant_id" uuid, "amount" bigint NOT NULL, "currency" character varying(3) NOT NULL, "status" "public"."orders_status_enum" NOT NULL DEFAULT 'PENDING', "razorpay_order_id" character varying(255), "plan" character varying(100), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_710e2d4957aa5878dfe94e4ac2f" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_a922b820eeef29ac1c6800e826" ON "orders"  ("user_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_a493914f314964159c6fb6fe5f" ON "orders"  ("razorpay_order_id") `,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."subscriptions_plan_enum" AS ENUM('BASIC', 'PREMIUM', 'PRO')`,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."subscriptions_status_enum" AS ENUM('ACTIVE', 'CANCELLED', 'PAST_DUE')`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "subscriptions" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "user_id" uuid NOT NULL, "tenant_id" uuid, "plan" "public"."subscriptions_plan_enum" NOT NULL, "status" "public"."subscriptions_status_enum" NOT NULL DEFAULT 'ACTIVE', "current_period_start" TIMESTAMP WITH TIME ZONE NOT NULL, "current_period_end" TIMESTAMP WITH TIME ZONE NOT NULL, "cancel_at_period_end" boolean NOT NULL DEFAULT false, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_a87248d73155605cf782be9ee5e" PRIMARY KEY ("id"))`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_d0a95ef8a28188364c546eb65c" ON "subscriptions"  ("user_id") `,
+    );
+    await queryRunner.query(`ALTER TABLE "users" DROP COLUMN "plan"`);
+    await queryRunner.query(`DROP TYPE "public"."users_plan_enum"`);
+    await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "userId"`);
+    await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "tenantId"`);
+    await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "plan"`);
+    await queryRunner.query(
+      `ALTER TABLE "payments" DROP COLUMN "razorpayOrderId"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" DROP COLUMN "razorpayPaymentId"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" DROP COLUMN "razorpaySignature"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" DROP COLUMN "transactionId"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" DROP COLUMN "subscriptionId"`,
+    );
+    await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "createdAt"`);
+    await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "updatedAt"`);
+    await queryRunner.query(
+      `ALTER TABLE "payments" ADD "user_id" uuid NOT NULL`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ADD "order_id" uuid NOT NULL`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ADD CONSTRAINT "UQ_b2f7b823a21562eeca20e72b006" UNIQUE ("order_id")`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ADD "razorpay_payment_id" character varying(255)`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ADD "razorpay_signature" character varying(512)`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ADD "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ADD "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()`,
+    );
+    await queryRunner.query(
+      `ALTER TYPE "public"."payments_status_enum" RENAME TO "payments_status_enum_old"`,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."payments_status_enum" AS ENUM('PENDING', 'SUCCEEDED', 'FAILED', 'REFUNDED', 'CANCELLED')`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ALTER COLUMN "status" DROP DEFAULT`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ALTER COLUMN "status" TYPE "public"."payments_status_enum" USING "status"::"text"::"public"."payments_status_enum"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ALTER COLUMN "status" SET DEFAULT 'PENDING'`,
+    );
+    await queryRunner.query(`DROP TYPE "public"."payments_status_enum_old"`);
+    await queryRunner.query(
+      `ALTER TYPE "public"."payments_paymentmethod_enum" RENAME TO "payments_paymentmethod_enum_old"`,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."payments_paymentmethod_enum" AS ENUM('RAZORPAY', 'CARD', 'BANK_TRANSFER', 'WALLET')`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ALTER COLUMN "paymentMethod" TYPE "public"."payments_paymentmethod_enum" USING "paymentMethod"::"text"::"public"."payments_paymentmethod_enum"`,
+    );
+    await queryRunner.query(
+      `DROP TYPE "public"."payments_paymentmethod_enum_old"`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_e7d1bec5311dcddd28c50547e8" ON "payments"  ("razorpay_payment_id") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_c2a89b63635ae2b4cc76f17a08" ON "payments"  ("user_id", "status") `,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "transactions" ADD CONSTRAINT "FK_464da95dc8a05470b2b158d4df6" FOREIGN KEY ("payment_id") REFERENCES "payments"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "transactions" ADD CONSTRAINT "FK_e9acc6efa76de013e8c1553ed2b" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "transactions" ADD CONSTRAINT "FK_4f27188c6c1d993bc76aeddcded" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ADD CONSTRAINT "FK_427785468fb7d2733f59e7d7d39" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ADD CONSTRAINT "FK_b2f7b823a21562eeca20e72b006" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" ADD CONSTRAINT "FK_a922b820eeef29ac1c6800e826a" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" ADD CONSTRAINT "FK_527dd6efd5f3402f729c6b3e826" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "subscriptions" ADD CONSTRAINT "FK_d0a95ef8a28188364c546eb65c1" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "subscriptions" ADD CONSTRAINT "FK_f6ac03431c311ccb8bbd7d3af18" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`ALTER TABLE "subscriptions" DROP CONSTRAINT "FK_f6ac03431c311ccb8bbd7d3af18"`);
-        await queryRunner.query(`ALTER TABLE "subscriptions" DROP CONSTRAINT "FK_d0a95ef8a28188364c546eb65c1"`);
-        await queryRunner.query(`ALTER TABLE "orders" DROP CONSTRAINT "FK_527dd6efd5f3402f729c6b3e826"`);
-        await queryRunner.query(`ALTER TABLE "orders" DROP CONSTRAINT "FK_a922b820eeef29ac1c6800e826a"`);
-        await queryRunner.query(`ALTER TABLE "payments" DROP CONSTRAINT "FK_b2f7b823a21562eeca20e72b006"`);
-        await queryRunner.query(`ALTER TABLE "payments" DROP CONSTRAINT "FK_427785468fb7d2733f59e7d7d39"`);
-        await queryRunner.query(`ALTER TABLE "transactions" DROP CONSTRAINT "FK_4f27188c6c1d993bc76aeddcded"`);
-        await queryRunner.query(`ALTER TABLE "transactions" DROP CONSTRAINT "FK_e9acc6efa76de013e8c1553ed2b"`);
-        await queryRunner.query(`ALTER TABLE "transactions" DROP CONSTRAINT "FK_464da95dc8a05470b2b158d4df6"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_c2a89b63635ae2b4cc76f17a08"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_e7d1bec5311dcddd28c50547e8"`);
-        await queryRunner.query(`CREATE TYPE "public"."payments_paymentmethod_enum_old" AS ENUM('razorpay', 'card', 'bank_transfer', 'wallet')`);
-        await queryRunner.query(`ALTER TABLE "payments" ALTER COLUMN "paymentMethod" TYPE "public"."payments_paymentmethod_enum_old" USING "paymentMethod"::"text"::"public"."payments_paymentmethod_enum_old"`);
-        await queryRunner.query(`DROP TYPE "public"."payments_paymentmethod_enum"`);
-        await queryRunner.query(`ALTER TYPE "public"."payments_paymentmethod_enum_old" RENAME TO "payments_paymentmethod_enum"`);
-        await queryRunner.query(`CREATE TYPE "public"."payments_status_enum_old" AS ENUM('pending', 'succeeded', 'failed', 'refunded', 'cancelled')`);
-        await queryRunner.query(`ALTER TABLE "payments" ALTER COLUMN "status" DROP DEFAULT`);
-        await queryRunner.query(`ALTER TABLE "payments" ALTER COLUMN "status" TYPE "public"."payments_status_enum_old" USING "status"::"text"::"public"."payments_status_enum_old"`);
-        await queryRunner.query(`ALTER TABLE "payments" ALTER COLUMN "status" SET DEFAULT 'pending'`);
-        await queryRunner.query(`DROP TYPE "public"."payments_status_enum"`);
-        await queryRunner.query(`ALTER TYPE "public"."payments_status_enum_old" RENAME TO "payments_status_enum"`);
-        await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "updated_at"`);
-        await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "created_at"`);
-        await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "razorpay_signature"`);
-        await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "razorpay_payment_id"`);
-        await queryRunner.query(`ALTER TABLE "payments" DROP CONSTRAINT "UQ_b2f7b823a21562eeca20e72b006"`);
-        await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "order_id"`);
-        await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "user_id"`);
-        await queryRunner.query(`ALTER TABLE "payments" ADD "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()`);
-        await queryRunner.query(`ALTER TABLE "payments" ADD "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()`);
-        await queryRunner.query(`ALTER TABLE "payments" ADD "subscriptionId" uuid`);
-        await queryRunner.query(`ALTER TABLE "payments" ADD "transactionId" character varying(255)`);
-        await queryRunner.query(`ALTER TABLE "payments" ADD "razorpaySignature" character varying(512)`);
-        await queryRunner.query(`ALTER TABLE "payments" ADD "razorpayPaymentId" character varying(255)`);
-        await queryRunner.query(`ALTER TABLE "payments" ADD "razorpayOrderId" character varying(255)`);
-        await queryRunner.query(`ALTER TABLE "payments" ADD "plan" character varying(100) NOT NULL`);
-        await queryRunner.query(`ALTER TABLE "payments" ADD "tenantId" uuid`);
-        await queryRunner.query(`ALTER TABLE "payments" ADD "userId" uuid NOT NULL`);
-        await queryRunner.query(`CREATE TYPE "public"."users_plan_enum" AS ENUM('free', 'pro', 'enterprise')`);
-        await queryRunner.query(`ALTER TABLE "users" ADD "plan" "public"."users_plan_enum" NOT NULL DEFAULT 'free'`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_d0a95ef8a28188364c546eb65c"`);
-        await queryRunner.query(`DROP TABLE "subscriptions"`);
-        await queryRunner.query(`DROP TYPE "public"."subscriptions_status_enum"`);
-        await queryRunner.query(`DROP TYPE "public"."subscriptions_plan_enum"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_a493914f314964159c6fb6fe5f"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_a922b820eeef29ac1c6800e826"`);
-        await queryRunner.query(`DROP TABLE "orders"`);
-        await queryRunner.query(`DROP TYPE "public"."orders_status_enum"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_e9acc6efa76de013e8c1553ed2"`);
-        await queryRunner.query(`DROP TABLE "transactions"`);
-        await queryRunner.query(`DROP TYPE "public"."transactions_type_enum"`);
-        await queryRunner.query(`CREATE INDEX "IDX_5e9210b4560e083026af787ec3" ON "payments" USING btree ("status", "userId") `);
-        await queryRunner.query(`CREATE INDEX "IDX_98a04cdcbac4f6a2c55c7d1935" ON "payments" USING btree ("tenantId") `);
-        await queryRunner.query(`CREATE INDEX "IDX_0d65ce2454954e71c67ea424c4" ON "payments" USING btree ("razorpayOrderId") `);
-        await queryRunner.query(`CREATE INDEX "IDX_487700240ef0deb9acf13f5a37" ON "payments" USING btree ("razorpayPaymentId") `);
-        await queryRunner.query(`CREATE INDEX "IDX_d35cb3c13a18e1ea1705b2817b" ON "payments" USING btree ("userId") `);
-    }
-
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `ALTER TABLE "subscriptions" DROP CONSTRAINT "FK_f6ac03431c311ccb8bbd7d3af18"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "subscriptions" DROP CONSTRAINT "FK_d0a95ef8a28188364c546eb65c1"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP CONSTRAINT "FK_527dd6efd5f3402f729c6b3e826"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP CONSTRAINT "FK_a922b820eeef29ac1c6800e826a"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" DROP CONSTRAINT "FK_b2f7b823a21562eeca20e72b006"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" DROP CONSTRAINT "FK_427785468fb7d2733f59e7d7d39"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "transactions" DROP CONSTRAINT "FK_4f27188c6c1d993bc76aeddcded"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "transactions" DROP CONSTRAINT "FK_e9acc6efa76de013e8c1553ed2b"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "transactions" DROP CONSTRAINT "FK_464da95dc8a05470b2b158d4df6"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_c2a89b63635ae2b4cc76f17a08"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_e7d1bec5311dcddd28c50547e8"`,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."payments_paymentmethod_enum_old" AS ENUM('razorpay', 'card', 'bank_transfer', 'wallet')`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ALTER COLUMN "paymentMethod" TYPE "public"."payments_paymentmethod_enum_old" USING "paymentMethod"::"text"::"public"."payments_paymentmethod_enum_old"`,
+    );
+    await queryRunner.query(`DROP TYPE "public"."payments_paymentmethod_enum"`);
+    await queryRunner.query(
+      `ALTER TYPE "public"."payments_paymentmethod_enum_old" RENAME TO "payments_paymentmethod_enum"`,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."payments_status_enum_old" AS ENUM('pending', 'succeeded', 'failed', 'refunded', 'cancelled')`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ALTER COLUMN "status" DROP DEFAULT`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ALTER COLUMN "status" TYPE "public"."payments_status_enum_old" USING "status"::"text"::"public"."payments_status_enum_old"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ALTER COLUMN "status" SET DEFAULT 'pending'`,
+    );
+    await queryRunner.query(`DROP TYPE "public"."payments_status_enum"`);
+    await queryRunner.query(
+      `ALTER TYPE "public"."payments_status_enum_old" RENAME TO "payments_status_enum"`,
+    );
+    await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "updated_at"`);
+    await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "created_at"`);
+    await queryRunner.query(
+      `ALTER TABLE "payments" DROP COLUMN "razorpay_signature"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" DROP COLUMN "razorpay_payment_id"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" DROP CONSTRAINT "UQ_b2f7b823a21562eeca20e72b006"`,
+    );
+    await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "order_id"`);
+    await queryRunner.query(`ALTER TABLE "payments" DROP COLUMN "user_id"`);
+    await queryRunner.query(
+      `ALTER TABLE "payments" ADD "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ADD "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()`,
+    );
+    await queryRunner.query(`ALTER TABLE "payments" ADD "subscriptionId" uuid`);
+    await queryRunner.query(
+      `ALTER TABLE "payments" ADD "transactionId" character varying(255)`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ADD "razorpaySignature" character varying(512)`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ADD "razorpayPaymentId" character varying(255)`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ADD "razorpayOrderId" character varying(255)`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payments" ADD "plan" character varying(100) NOT NULL`,
+    );
+    await queryRunner.query(`ALTER TABLE "payments" ADD "tenantId" uuid`);
+    await queryRunner.query(
+      `ALTER TABLE "payments" ADD "userId" uuid NOT NULL`,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."users_plan_enum" AS ENUM('free', 'pro', 'enterprise')`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "users" ADD "plan" "public"."users_plan_enum" NOT NULL DEFAULT 'free'`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_d0a95ef8a28188364c546eb65c"`,
+    );
+    await queryRunner.query(`DROP TABLE "subscriptions"`);
+    await queryRunner.query(`DROP TYPE "public"."subscriptions_status_enum"`);
+    await queryRunner.query(`DROP TYPE "public"."subscriptions_plan_enum"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_a493914f314964159c6fb6fe5f"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_a922b820eeef29ac1c6800e826"`,
+    );
+    await queryRunner.query(`DROP TABLE "orders"`);
+    await queryRunner.query(`DROP TYPE "public"."orders_status_enum"`);
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_e9acc6efa76de013e8c1553ed2"`,
+    );
+    await queryRunner.query(`DROP TABLE "transactions"`);
+    await queryRunner.query(`DROP TYPE "public"."transactions_type_enum"`);
+    await queryRunner.query(
+      `CREATE INDEX "IDX_5e9210b4560e083026af787ec3" ON "payments" USING btree ("status", "userId") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_98a04cdcbac4f6a2c55c7d1935" ON "payments" USING btree ("tenantId") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_0d65ce2454954e71c67ea424c4" ON "payments" USING btree ("razorpayOrderId") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_487700240ef0deb9acf13f5a37" ON "payments" USING btree ("razorpayPaymentId") `,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_d35cb3c13a18e1ea1705b2817b" ON "payments" USING btree ("userId") `,
+    );
+  }
 }

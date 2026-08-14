@@ -23,5 +23,4 @@ export class PaymentsRepository extends Repository<Payment> {
   async findPaymentById(id: string): Promise<Payment | null> {
     return this.findOneBy({ id });
   }
-
 }

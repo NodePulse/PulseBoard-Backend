@@ -12,6 +12,7 @@ import {
   HttpCode,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { ApiEndpoint } from '../../core/decorators/api-endpoint.decorator';
 import { RegisterUserDTO } from './dto/registerUser.dto';
 import { LoginUserDTO } from './dto/loginUser.dto';
 import { VerifyOtpDTO } from './dto/verifyOtp.dto';
@@ -22,6 +23,8 @@ import { RESPONSE_MESSAGES } from '../../core/constants/messages';
 import { SessionGuard } from '../../core/guards/session.guard';
 import { CurrentUser } from '../../core/decorators/current-user.decorator';
 import type { Request, Response } from 'express';
+import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { User } from '../users/entities/user.entity';
 
 const SESSION_COOKIE_NAME = 'pulseboard_session';
 
@@ -40,8 +43,28 @@ export class AuthController {
     return this.authService.registerUser(dto);
   }
 
+  @ApiTags('Authentication')
+  @ApiOperation({
+    summary: 'Login with email and password',
+    description:
+      'Authenticates a user and starts a session. On success, a session ID is set as an ' +
+      'httpOnly cookie — the frontend does not need to store or send any token manually; ' +
+      'the browser will include the cookie automatically on subsequent requests. ' +
+      'The response body only contains the user profile, not the session token.',
+  })
+  @ApiBody({ type: LoginUserDTO })
+  @ApiEndpoint({
+    201: {
+      type: { user: User },
+      message: RESPONSE_MESSAGES.AUTH.LOGIN_SUCCESS,
+    },
+    400: RESPONSE_MESSAGES.AUTH.VALIDATION_ERROR,
+    401: RESPONSE_MESSAGES.AUTH.INVALID_CREDENTIALS,
+    403: RESPONSE_MESSAGES.AUTH.FORBIDDEN,
+    429: RESPONSE_MESSAGES.AUTH.TOO_MANY_REQUESTS,
+  })
   @Post(API_PATHS.AUTH.LOGIN)
-  @ResponseMessage('Login successful')
+  @ResponseMessage(RESPONSE_MESSAGES.AUTH.LOGIN_SUCCESS)
   public async login(
     @Body() dto: LoginUserDTO,
     @Req() req: Request,

@@ -29,7 +29,9 @@ export class OrdersService {
     return this.orderRepository.save(order);
   }
 
-  public async findByRazorpayOrderId(razorpayOrderId: string): Promise<Order | null> {
+  public async findByRazorpayOrderId(
+    razorpayOrderId: string,
+  ): Promise<Order | null> {
     return this.orderRepository.findOne({
       where: { razorpayOrderId },
     });
