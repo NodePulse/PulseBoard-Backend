@@ -13,7 +13,6 @@ export const RESPONSE_MESSAGES = {
   USER_NOT_FOUND: 'User not found',
   FREE_PLAN_RESTRICTION:
     'Users on the Free plan are not allowed to create tenants. Please upgrade your plan.',
-  TENANT_SLUG_CONFLICT: 'Tenant slug is already taken',
   HEADER_REQUIRED: 'x-user-id header is required for identification',
   USER_REGISTERED: 'User registered successfully',
   TENANT_CREATED: 'Tenant created successfully',
@@ -34,6 +33,10 @@ export const RESPONSE_MESSAGES = {
     PLAN_INACTIVE: 'This subscription plan is currently unavailable',
     INVALID_AMOUNT: 'Invalid subscription plan amount',
     ORDER_NOT_FOUND: 'We couldn’t find your payment order. Please try again.',
+  },
+  TENANT: {
+    TENANT_SLUG_CONFLICT: 'Tenant slug is already taken',
+    USER_ALREADY_HAVE_TENANT: 'You already have a organization.',
   },
 };
 

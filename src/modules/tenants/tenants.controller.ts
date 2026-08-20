@@ -15,7 +15,7 @@ import { RESPONSE_MESSAGES } from '../../core/constants/messages';
 export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
 
-  @Post()
+  @Post(API_PATHS.TENANTS.CREATE_ORGANIZATION)
   @ResponseMessage(RESPONSE_MESSAGES.TENANT_CREATED)
   public async create(
     @Headers('x-user-id') userId: string,

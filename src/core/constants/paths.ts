@@ -14,6 +14,7 @@ export const API_PATHS = {
   },
   TENANTS: {
     ROOT: 'tenants',
+    CREATE_ORGANIZATION: 'create-organization',
   },
   USERS: {
     ROOT: 'users',
