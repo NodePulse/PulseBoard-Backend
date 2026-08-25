@@ -37,10 +37,25 @@ export interface SessionPayload {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @ApiTags('Authentication')
+  @ApiOperation({
+    summary: 'Register a new user',
+    description: 'Registers a new user with the provided details',
+  })
+  @ApiBody({ type: RegisterUserDTO })
+  @ApiEndpoint({
+    201: {
+      type: { user: User },
+      message: RESPONSE_MESSAGES.USER_REGISTERED,
+    },
+    400: RESPONSE_MESSAGES.AUTH.VALIDATION_ERROR,
+    409: RESPONSE_MESSAGES.CONFLICT_EMAIL,
+  })
   @Post(API_PATHS.AUTH.REGISTER)
   @ResponseMessage(RESPONSE_MESSAGES.USER_REGISTERED)
   public async register(@Body() dto: RegisterUserDTO) {
-    return this.authService.registerUser(dto);
+    const user = await this.authService.registerUser(dto);
+    return { user };
   }
 
   @ApiTags('Authentication')

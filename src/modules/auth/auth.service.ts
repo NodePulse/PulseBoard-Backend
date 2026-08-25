@@ -81,7 +81,9 @@ export class AuthService {
   }
 
   // SERVICE
-  public async registerUser(dto: RegisterUserDTO): Promise<User> {
+  public async registerUser(
+    dto: RegisterUserDTO,
+  ): Promise<{ id: string; userEmail: string; isEmailVerified: boolean }> {
     const { email, firstName, lastName, password } = dto;
 
     const existingUser = await this.userRepository.findByEmailAndTenant(
@@ -119,8 +121,9 @@ export class AuthService {
       magicLink,
       jobId: randomUUID(),
     });
+    const { id, email: userEmail, isEmailVerified } = savedUser;
 
-    return savedUser;
+    return { id, userEmail, isEmailVerified };
   }
 
   // SERVICE

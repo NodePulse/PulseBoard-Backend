@@ -8,7 +8,6 @@ import {
 import { VALIDATION_MESSAGES } from '../../../core/constants/messages';
 import { VALIDATION_LIMITS } from '../../../core/constants/limits';
 import { ApiProperty } from '@nestjs/swagger';
-import { User } from '../../users/entities/user.entity';
 
 export class LoginUserDTO {
   @ApiProperty({
