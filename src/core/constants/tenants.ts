@@ -1,0 +1,4 @@
+export const TENANT_CONSTANTS = {
+  CODE_PREFIX: 'O',
+  CODE_BYTE_LENGTH: 4,
+};

@@ -14,6 +14,7 @@ import { SubscriptionsModule } from './modules/subscriptions/subscriptions.modul
 import { OrdersModule } from './modules/orders/orders.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { LoggerMiddleware } from './core/middleware/logger.middleware';
+import { CONSOLE_COLORS, MODULE_PREFIXES } from './core/constants/colors';
 
 @Module({
   imports: [
@@ -28,11 +29,15 @@ import { LoggerMiddleware } from './core/middleware/logger.middleware';
           host: configService.get<string>('redis.host'),
           port: configService.get<number>('redis.port'),
           password: configService.get<string>('redis.password'),
-          tls: { servername: configService.get<string>('redis.host') },
+          tls: ['localhost', '127.0.0.1'].includes(
+            configService.get<string>('redis.host'),
+          )
+            ? undefined
+            : { servername: configService.get<string>('redis.host') },
           maxRetriesPerRequest: null,
           retryStrategy(times) {
             console.warn(
-              `[BullMQ] Redis connection lost. Retrying connection (attempt ${times})...`,
+              `${MODULE_PREFIXES.BULLMQ} ${CONSOLE_COLORS.YELLOW}Redis connection lost. Retrying connection (attempt ${times})...${CONSOLE_COLORS.RESET}`,
             );
             return Math.min(times * 100, 10000);
           },

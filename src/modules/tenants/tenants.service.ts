@@ -8,10 +8,12 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomBytes } from 'crypto';
 import { Tenant } from './entities/tenant.entity';
-import { User, WorkspaceRole } from '../users/entities/user.entity';
+import { WorkspaceRole } from '../users/entities/user.entity';
 import { CreateTenantDTO } from './dto/create-tenant.dto';
 import { RESPONSE_MESSAGES } from '../../core/constants/messages';
+import { TENANT_CONSTANTS } from '../../core/constants/tenants';
 import { UserRepository } from '../users/repositories/user.repository';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 
@@ -61,14 +63,20 @@ export class TenantsService {
         );
       }
 
-      // 4. Create and save the Tenant
+      // 4. Generate unique tenant code
+      const code = `${TENANT_CONSTANTS.CODE_PREFIX}${randomBytes(TENANT_CONSTANTS.CODE_BYTE_LENGTH)
+        .toString('hex')
+        .toUpperCase()}`;
+
+      // 5. Create and save the Tenant
       const tenant = this.tenantRepository.create({
         name,
         slug,
+        code,
       });
       const savedTenant = await this.tenantRepository.save(tenant);
 
-      // 5. Update user to associate with the tenant and set workspace role to OWNER
+      // 6. Update user to associate with the tenant and set workspace role to OWNER
       user.tenantId = savedTenant.id;
       user.workspaceRole = WorkspaceRole.OWNER;
       await this.userRepository.save(user);

@@ -102,10 +102,21 @@ export class AuthController {
     return { user };
   }
 
+  @ApiTags('Authentication')
+  @ApiOperation({
+    summary: 'Logout a user',
+    description: 'Logout a user',
+  })
+  @ApiEndpoint({
+    201: {
+      type: { user: User },
+      message: RESPONSE_MESSAGES.LOGOUT_SUCCESS,
+    },
+    401: RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN,
+  })
   @Post(API_PATHS.AUTH.LOGOUT)
   @UseGuards(SessionGuard)
   @HttpCode(200)
-  @ResponseMessage(RESPONSE_MESSAGES.LOGOUT_SUCCESS)
   public async logout(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
@@ -119,9 +130,20 @@ export class AuthController {
     return true;
   }
 
+  @ApiTags('Authentication')
+  @ApiOperation({
+    summary: 'Get current user information',
+    description: 'Get current user information',
+  })
+  @ApiEndpoint({
+    200: {
+      type: { user: User },
+      message: 'Session retrieved successfully',
+    },
+    401: RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN,
+  })
   @Get(API_PATHS.AUTH.ME)
   @UseGuards(SessionGuard)
-  @ResponseMessage('Session retrieved successfully')
   public async getMe(@CurrentUser() user: SessionPayload) {
     return this.authService.getMe(user.sub);
   }
@@ -134,20 +156,53 @@ export class AuthController {
     return { csrfToken: token };
   }
 
+  @ApiTags('Authentication')
+  @ApiOperation({
+    summary: 'Verify magic token',
+    description: 'Verify magic token',
+  })
+  @ApiEndpoint({
+    200: {
+      type: { user: User },
+      message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS,
+    },
+    401: RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN,
+  })
   @Get(API_PATHS.AUTH.VERIFY_MAGIC)
-  @ResponseMessage(RESPONSE_MESSAGES.VERIFICATION_SUCCESS)
   public async verifyMagic(@Query('token') token: string) {
     return this.authService.verifyMagic(token);
   }
 
+  @ApiTags('Authentication')
+  @ApiOperation({
+    summary: 'Verify OTP',
+    description: 'Verify OTP',
+  })
+  @ApiEndpoint({
+    200: {
+      type: { user: User },
+      message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS,
+    },
+    401: RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN,
+  })
   @Post(API_PATHS.AUTH.VERIFY_OTP)
-  @ResponseMessage(RESPONSE_MESSAGES.VERIFICATION_SUCCESS)
   public async verifyOtp(@Body() dto: VerifyOtpDTO) {
     return this.authService.verifyOtp(dto);
   }
 
+  @ApiTags('Authentication')
+  @ApiOperation({
+    summary: 'Resend verification',
+    description: 'Resend verification',
+  })
+  @ApiEndpoint({
+    200: {
+      type: { user: User },
+      message: RESPONSE_MESSAGES.RESEND_SUCCESS,
+    },
+    401: RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN,
+  })
   @Post(API_PATHS.AUTH.RESEND_VERIFICATION)
-  @ResponseMessage(RESPONSE_MESSAGES.RESEND_SUCCESS)
   public async resendVerification(@Body() dto: ResendVerificationDTO) {
     return this.authService.resendVerification(dto);
   }

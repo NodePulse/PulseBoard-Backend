@@ -10,8 +10,15 @@ import {
   VERIFICATION_METHODS,
 } from '../../../core/constants/messages';
 import { VALIDATION_LIMITS } from '../../../core/constants/limits';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class ResendVerificationDTO {
+  @ApiProperty({
+    description: 'Email of the user',
+    example: 'user@yopmail.com',
+    type: 'string',
+    required: true,
+  })
   @IsEmail({}, { message: VALIDATION_MESSAGES.EMAIL('Email') })
   @MaxLength(VALIDATION_LIMITS.EMAIL.MAX, {
     message: VALIDATION_MESSAGES.MAX_LENGTH(
@@ -22,6 +29,11 @@ export class ResendVerificationDTO {
   @IsNotEmpty({ message: VALIDATION_MESSAGES.REQUIRED('Email') })
   email: string;
 
+  @ApiProperty({
+    description: 'Verification method',
+    enum: [VERIFICATION_METHODS.MAGIC, VERIFICATION_METHODS.OTP],
+    required: true,
+  })
   @IsString({ message: VALIDATION_MESSAGES.MUST_BE_STRING('Method') })
   @IsIn([VERIFICATION_METHODS.MAGIC, VERIFICATION_METHODS.OTP], {
     message: VALIDATION_MESSAGES.METHOD_INVALID('Method'),

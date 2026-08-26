@@ -234,6 +234,10 @@ export class AuthService {
 
   // SERVICE
   public async logout(sessionId: string): Promise<void> {
+    if (!sessionId) {
+      throw new UnauthorizedException();
+    }
+
     if (sessionId) {
       const session = await this.sessionRepository.findOne({
         where: { id: sessionId },

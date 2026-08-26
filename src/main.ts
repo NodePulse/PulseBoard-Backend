@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { AllConfig } from './config/config.interface';
 import { ValidationPipe } from '@nestjs/common';
 import { TransformInterceptor } from './core/interceptors/transform.interceptor';
+import { LoggingInterceptor } from './core/interceptors/logging.interceptor';
 import { HttpExceptionFilter } from './core/filters/http-exception.filter';
 import cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -35,14 +36,17 @@ async function bootstrap() {
     }),
   );
   app.enableCors({
-    origin: ['http://localhost:3000'],
+    origin: ['http://localhost:3000', 'http://localhost:52891'],
     credentials: true,
   });
 
   app.setGlobalPrefix('api');
 
   const reflector = app.get(Reflector);
-  app.useGlobalInterceptors(new TransformInterceptor(reflector));
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(),
+    new TransformInterceptor(reflector),
+  );
   app.useGlobalFilters(new HttpExceptionFilter());
 
   const PORT = configService.get('app.port', { infer: true });

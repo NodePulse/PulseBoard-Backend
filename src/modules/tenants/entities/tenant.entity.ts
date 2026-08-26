@@ -24,6 +24,9 @@ export class Tenant {
   @Column({ length: 100, unique: true })
   slug: string;
 
+  @Column({ type: 'char', length: 9, unique: true })
+  code: string;
+
   @Column({
     type: 'enum',
     enum: TenantPlan,
