@@ -33,25 +33,25 @@ export class Session {
   @Column({ name: 'operating_system', length: 100, nullable: true })
   operatingSystem: string | null;
 
-  @Column({ name: 'ip_address', type: 'inet', nullable: true })
+  @Column({ name: 'ip_address', type: 'varchar', nullable: true })
   ipAddress: string | null;
 
   @Column({ name: 'user_agent', type: 'text', nullable: true })
   userAgent: string | null;
 
-  @Column({ name: 'revoked_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'revoked_at', type: 'datetime', nullable: true })
   revokedAt: Date | null;
 
   @Column({
     name: 'last_used_at',
-    type: 'timestamptz',
+    type: 'datetime',
     default: () => 'CURRENT_TIMESTAMP',
   })
   lastUsedAt: Date;
 
-  @Column({ name: 'expires_at', type: 'timestamptz' })
+  @Column({ name: 'expires_at', type: 'datetime' })
   expiresAt: Date;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'datetime' })
   createdAt: Date;
 }

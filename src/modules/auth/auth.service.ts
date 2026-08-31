@@ -19,7 +19,7 @@ import {
   RESPONSE_MESSAGES,
   VERIFICATION_METHODS,
 } from '../../core/constants/messages';
-import { API_PATHS } from '../../core/constants/paths';
+import { API_ROUTES } from '../../core/constants/routes';
 import { UserRepository } from '../users/repositories/user.repository';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
@@ -163,7 +163,7 @@ export class AuthService {
       const isExpired = user.verificationExpiresAt
         ? new Date() > user.verificationExpiresAt
         : true;
-      const resendPath = `/api/${API_PATHS.AUTH.ROOT}/${API_PATHS.AUTH.RESEND_VERIFICATION}`;
+      const resendPath = `/api/${API_ROUTES.AUTH.ROOT}/${API_ROUTES.AUTH.RESEND_VERIFICATION}`;
       throw new UnauthorizedException({
         message: RESPONSE_MESSAGES.EMAIL_NOT_VERIFIED,
         data: {

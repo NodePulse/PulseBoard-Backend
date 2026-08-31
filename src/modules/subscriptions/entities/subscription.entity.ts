@@ -44,30 +44,28 @@ export class Subscription {
   tenantId: string | null;
 
   @Column({
-    type: 'enum',
-    enum: SubscriptionPlan,
+    type: 'varchar',
   })
   plan: SubscriptionPlan;
 
   @Column({
-    type: 'enum',
-    enum: SubscriptionStatus,
+    type: 'varchar',
     default: SubscriptionStatus.ACTIVE,
   })
   status: SubscriptionStatus;
 
-  @Column({ type: 'timestamptz', name: 'current_period_start' })
+  @Column({ type: 'datetime', name: 'current_period_start' })
   currentPeriodStart: Date;
 
-  @Column({ type: 'timestamptz', name: 'current_period_end' })
+  @Column({ type: 'datetime', name: 'current_period_end' })
   currentPeriodEnd: Date;
 
   @Column({ name: 'cancel_at_period_end', default: false })
   cancelAtPeriodEnd: boolean;
 
-  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
+  @CreateDateColumn({ type: 'datetime', name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
+  @UpdateDateColumn({ type: 'datetime', name: 'updated_at' })
   updatedAt: Date;
 }

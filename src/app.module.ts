@@ -24,25 +24,31 @@ import { CONSOLE_COLORS, MODULE_PREFIXES } from './core/constants/colors';
     SessionModule,
     BullModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        connection: {
-          host: configService.get<string>('redis.host'),
-          port: configService.get<number>('redis.port'),
-          password: configService.get<string>('redis.password'),
-          tls: ['localhost', '127.0.0.1'].includes(
-            configService.get<string>('redis.host'),
-          )
-            ? undefined
-            : { servername: configService.get<string>('redis.host') },
-          maxRetriesPerRequest: null,
-          retryStrategy(times) {
-            console.warn(
-              `${MODULE_PREFIXES.BULLMQ} ${CONSOLE_COLORS.YELLOW}Redis connection lost. Retrying connection (attempt ${times})...${CONSOLE_COLORS.RESET}`,
-            );
-            return Math.min(times * 100, 10000);
+      useFactory: (configService: ConfigService) => {
+        const config = configService.get('redis');
+        console.log('BullMQ Redis Config:', config);
+        return {
+          connection: {
+            host: config.host,
+            port: config.port,
+            password: config.password || undefined,
+            tls: ['localhost', '127.0.0.1'].includes(config.host)
+              ? undefined
+              : { servername: config.host },
+            enableReadyCheck: false,
+            family: 0,
+            keepAlive: 10000,
+            skipVersionCheck: true,
+            maxRetriesPerRequest: null,
+            retryStrategy(times) {
+              console.warn(
+                `${MODULE_PREFIXES.BULLMQ} ${CONSOLE_COLORS.YELLOW}Redis connection lost. Retrying connection (attempt ${times})...${CONSOLE_COLORS.RESET}`,
+              );
+              return Math.min(times * 100, 10000);
+            },
           },
-        },
-      }),
+        };
+      },
     }),
     UsersModule,
     TenantsModule,

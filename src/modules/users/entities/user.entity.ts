@@ -68,7 +68,7 @@ export class User {
   @ApiPropertyOptional({ description: 'When the verification token/OTP expires' })
   @Column({
     name: 'verification_expires_at',
-    type: 'timestamptz',
+    type: 'datetime',
     nullable: true,
   })
   verificationExpiresAt: Date | null;
@@ -76,8 +76,7 @@ export class User {
   @ApiProperty({ enum: WorkspaceRole, description: 'Role within the workspace' })
   @Column({
     name: 'workspace_role',
-    type: 'enum',
-    enum: WorkspaceRole,
+    type: 'varchar',
     default: WorkspaceRole.MEMBER,
   })
   workspaceRole: WorkspaceRole;
@@ -87,14 +86,14 @@ export class User {
   isActive: boolean;
 
   @ApiProperty({ description: 'Creation date' })
-  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
+  @CreateDateColumn({ type: 'datetime', name: 'created_at' })
   createdAt: Date;
 
   @ApiProperty({ description: 'Last update date' })
-  @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
+  @UpdateDateColumn({ type: 'datetime', name: 'updated_at' })
   updatedAt: Date;
 
   @ApiPropertyOptional({ description: 'Deletion date' })
-  @DeleteDateColumn({ type: 'timestamptz', name: 'deleted_at', nullable: true })
+  @DeleteDateColumn({ type: 'datetime', name: 'deleted_at', nullable: true })
   deletedAt: Date | null;
 }

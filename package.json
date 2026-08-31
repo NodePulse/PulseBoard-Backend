@@ -5,10 +5,6 @@
   "description": "Nest TypeScript starter repository",
   "license": "MIT",
   "scripts": {
-    "typeorm": "npx typeorm-ts-node-commonjs -d src/core/database/data-source.ts",
-    "migration:generate": "npx typeorm-ts-node-commonjs migration:generate -d src/core/database/data-source.ts",
-    "migration:run": "npx typeorm-ts-node-commonjs migration:run -d src/core/database/data-source.ts",
-    "migration:revert": "npx typeorm-ts-node-commonjs migration:revert -d src/core/database/data-source.ts",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
@@ -21,7 +17,10 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/jest/bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "postman:sync": "node --env-file=.env postman-sync.js"
+    "postman:sync": "node --env-file=.env postman-sync.js",
+    "d1:migration:generate": "ts-node scripts/generate-d1-migration.ts",
+    "d1:migration:apply:local": "wrangler d1 migrations apply pulseboard-db --local",
+    "d1:migration:apply:remote": "wrangler d1 migrations apply pulseboard-db --remote"
   },
   "engines": {
     "npm": ">=10.0.0",
@@ -35,22 +34,22 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/platform-express": "^11.1.11",
     "@nestjs/swagger": "^11.4.6",
-    "@nestjs/typeorm": "^11.0.3",
     "@types/cookie-parser": "^1.4.10",
     "bcrypt": "^6.0.0",
+    "better-sqlite3": "^13.0.3",
     "bullmq": "^5.80.10",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
     "ioredis": "^5.11.1",
     "joi": "^18.2.3",
     "nodemailer": "^9.0.3",
     "pg": "^8.22.0",
     "razorpay": "^2.9.8",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1",
-    "typeorm": "^1.1.0"
+    "rxjs": "^7.8.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -61,14 +60,17 @@
     "@swc/cli": "^0.6.0",
     "@swc/core": "^1.10.8",
     "@types/bcrypt": "^6.0.0",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.10.7",
     "@types/nodemailer": "^8.0.1",
+    "@types/pg": "^8.23.1",
     "@types/supertest": "^6.0.2",
     "ajv": "^8.20.0",
     "chokidar": "^5.0.0",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.3",
@@ -83,7 +85,8 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.20.0"
+    "typescript-eslint": "^8.20.0",
+    "wrangler": "^4.127.1"
   },
   "jest": {
     "moduleFileExtensions": [

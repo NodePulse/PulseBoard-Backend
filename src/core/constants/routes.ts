@@ -1,4 +1,4 @@
-export const API_PATHS = {
+export const API_ROUTES = {
   AUTH: {
     ROOT: 'auth',
     REGISTER: 'register',

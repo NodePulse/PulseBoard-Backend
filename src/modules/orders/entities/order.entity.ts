@@ -53,8 +53,7 @@ export class Order {
   currency: string;
 
   @Column({
-    type: 'enum',
-    enum: OrderStatus,
+    type: 'varchar',
     default: OrderStatus.PENDING,
   })
   status: OrderStatus;
@@ -70,9 +69,9 @@ export class Order {
   @OneToOne(() => Payment, (payment) => payment.order)
   payment: Payment;
 
-  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
+  @CreateDateColumn({ type: 'datetime', name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
+  @UpdateDateColumn({ type: 'datetime', name: 'updated_at' })
   updatedAt: Date;
 }

@@ -66,15 +66,13 @@ export class Payment {
   currency: string;
 
   @Column({
-    type: 'enum',
-    enum: PaymentStatus,
+    type: 'varchar',
     default: PaymentStatus.PENDING,
   })
   status: PaymentStatus;
 
   @Column({
-    type: 'enum',
-    enum: PaymentMethod,
+    type: 'varchar',
   })
   paymentMethod: PaymentMethod;
 
@@ -96,9 +94,9 @@ export class Payment {
   @OneToMany(() => Transaction, (transaction) => transaction.payment)
   transactions: Transaction[];
 
-  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
+  @CreateDateColumn({ type: 'datetime', name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
+  @UpdateDateColumn({ type: 'datetime', name: 'updated_at' })
   updatedAt: Date;
 }

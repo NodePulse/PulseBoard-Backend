@@ -7,15 +7,15 @@ import {
 } from '@nestjs/common';
 import { TenantsService } from './tenants.service';
 import { CreateTenantDTO } from './dto/create-tenant.dto';
-import { API_PATHS } from '../../core/constants/paths';
 import { ResponseMessage } from '../../core/decorators/response-message.decorator';
 import { RESPONSE_MESSAGES } from '../../core/constants/messages';
+import { API_ROUTES } from '../../core/constants/routes';
 
-@Controller(API_PATHS.TENANTS.ROOT)
+@Controller(API_ROUTES.TENANTS.ROOT)
 export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
 
-  @Post(API_PATHS.TENANTS.CREATE_ORGANIZATION)
+  @Post(API_ROUTES.TENANTS.CREATE_ORGANIZATION)
   @ResponseMessage(RESPONSE_MESSAGES.TENANT_CREATED)
   public async create(
     @Headers('x-user-id') userId: string,

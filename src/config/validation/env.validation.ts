@@ -9,7 +9,7 @@ export default Joi.object({
 
   API_PREFIX: Joi.string().required(),
 
-  DATABASE_URL: Joi.string().required(),
+  DATABASE_URL: Joi.string().optional(),
 
   DB_POOL_SIZE: Joi.number().default(10),
 

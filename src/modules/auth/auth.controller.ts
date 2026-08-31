@@ -17,7 +17,7 @@ import { RegisterUserDTO } from './dto/registerUser.dto';
 import { LoginUserDTO } from './dto/loginUser.dto';
 import { VerifyOtpDTO } from './dto/verifyOtp.dto';
 import { ResendVerificationDTO } from './dto/resendVerification.dto';
-import { API_PATHS } from '../../core/constants/paths';
+import { API_ROUTES } from '../../core/constants/routes';
 import { ResponseMessage } from '../../core/decorators/response-message.decorator';
 import { RESPONSE_MESSAGES } from '../../core/constants/messages';
 import { SessionGuard } from '../../core/guards/session.guard';
@@ -33,7 +33,7 @@ export interface SessionPayload {
   sid: string;
 }
 
-@Controller(API_PATHS.AUTH.ROOT)
+@Controller(API_ROUTES.AUTH.ROOT)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -51,7 +51,7 @@ export class AuthController {
     400: RESPONSE_MESSAGES.AUTH.VALIDATION_ERROR,
     409: RESPONSE_MESSAGES.CONFLICT_EMAIL,
   })
-  @Post(API_PATHS.AUTH.REGISTER)
+  @Post(API_ROUTES.AUTH.REGISTER)
   @ResponseMessage(RESPONSE_MESSAGES.USER_REGISTERED)
   public async register(@Body() dto: RegisterUserDTO) {
     const user = await this.authService.registerUser(dto);
@@ -78,7 +78,7 @@ export class AuthController {
     403: RESPONSE_MESSAGES.AUTH.FORBIDDEN,
     429: RESPONSE_MESSAGES.AUTH.TOO_MANY_REQUESTS,
   })
-  @Post(API_PATHS.AUTH.LOGIN)
+  @Post(API_ROUTES.AUTH.LOGIN)
   @ResponseMessage(RESPONSE_MESSAGES.AUTH.LOGIN_SUCCESS)
   public async login(
     @Body() dto: LoginUserDTO,
@@ -114,7 +114,7 @@ export class AuthController {
     },
     401: RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN,
   })
-  @Post(API_PATHS.AUTH.LOGOUT)
+  @Post(API_ROUTES.AUTH.LOGOUT)
   @UseGuards(SessionGuard)
   @HttpCode(200)
   public async logout(
@@ -142,13 +142,13 @@ export class AuthController {
     },
     401: RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN,
   })
-  @Get(API_PATHS.AUTH.ME)
+  @Get(API_ROUTES.AUTH.ME)
   @UseGuards(SessionGuard)
   public async getMe(@CurrentUser() user: SessionPayload) {
     return this.authService.getMe(user.sub);
   }
 
-  @Get(API_PATHS.AUTH.CSRF_TOKEN)
+  @Get(API_ROUTES.AUTH.CSRF_TOKEN)
   @UseGuards(SessionGuard)
   @ResponseMessage('CSRF token generated')
   public async getCsrfToken(@CurrentUser() user: SessionPayload) {
@@ -168,7 +168,7 @@ export class AuthController {
     },
     401: RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN,
   })
-  @Get(API_PATHS.AUTH.VERIFY_MAGIC)
+  @Get(API_ROUTES.AUTH.VERIFY_MAGIC)
   public async verifyMagic(@Query('token') token: string) {
     return this.authService.verifyMagic(token);
   }
@@ -185,7 +185,7 @@ export class AuthController {
     },
     401: RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN,
   })
-  @Post(API_PATHS.AUTH.VERIFY_OTP)
+  @Post(API_ROUTES.AUTH.VERIFY_OTP)
   public async verifyOtp(@Body() dto: VerifyOtpDTO) {
     return this.authService.verifyOtp(dto);
   }
@@ -202,19 +202,19 @@ export class AuthController {
     },
     401: RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN,
   })
-  @Post(API_PATHS.AUTH.RESEND_VERIFICATION)
+  @Post(API_ROUTES.AUTH.RESEND_VERIFICATION)
   public async resendVerification(@Body() dto: ResendVerificationDTO) {
     return this.authService.resendVerification(dto);
   }
 
-  @Get(API_PATHS.AUTH.SESSIONS)
+  @Get(API_ROUTES.AUTH.SESSIONS)
   @UseGuards(SessionGuard)
   @ResponseMessage('Active sessions retrieved successfully')
   public async getSessions(@CurrentUser() user: SessionPayload) {
     return this.authService.getActiveSessions(user.sub);
   }
 
-  @Delete(`${API_PATHS.AUTH.SESSIONS}/:id`)
+  @Delete(`${API_ROUTES.AUTH.SESSIONS}/:id`)
   @UseGuards(SessionGuard)
   @ResponseMessage(RESPONSE_MESSAGES.SESSION_REVOKED)
   public async revokeSession(
