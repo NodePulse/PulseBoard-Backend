@@ -64,7 +64,9 @@ export class TenantsService {
       }
 
       // 4. Generate unique tenant code
-      const code = `${TENANT_CONSTANTS.CODE_PREFIX}${randomBytes(TENANT_CONSTANTS.CODE_BYTE_LENGTH)
+      const code = `${TENANT_CONSTANTS.CODE_PREFIX}${randomBytes(
+        TENANT_CONSTANTS.CODE_BYTE_LENGTH,
+      )
         .toString('hex')
         .toUpperCase()}`;
 
@@ -92,5 +94,23 @@ export class TenantsService {
           : 'An error occurred while creating the tenant',
       );
     }
+  }
+
+  public async getTenant(userId: string) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException(RESPONSE_MESSAGES.USER_NOT_FOUND);
+    }
+
+    if (!user.tenantId) {
+      return { tenant: null, role: user.workspaceRole };
+    }
+    const tenant = await this.tenantRepository.findOne({
+      where: { id: user.tenantId },
+    });
+    if (!tenant) {
+      throw new NotFoundException(RESPONSE_MESSAGES.TENANT.TENANT_NOT_FOUND);
+    }
+    return { tenant, role: user.workspaceRole };
   }
 }

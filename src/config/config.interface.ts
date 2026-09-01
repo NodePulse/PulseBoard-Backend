@@ -36,6 +36,10 @@ export interface RazorpayConfig {
   // webhookSecret: string;
 }
 
+export interface RabbitMQConfig {
+  url: string;
+}
+
 export interface AllConfig {
   app: AppConfig;
   database: DatabaseConfig;
@@ -43,4 +47,5 @@ export interface AllConfig {
   redis: RedisConfig;
   mail: MailConfig;
   razorpay: RazorpayConfig;
+  rabbitmq: RabbitMQConfig;
 }

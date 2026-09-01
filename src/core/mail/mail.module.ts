@@ -1,15 +1,31 @@
 import { Module } from '@nestjs/common';
-import { BullModule } from '@nestjs/bullmq';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailService } from './mail.service';
-import { MailProcessor } from './mail.processor';
+import { MailController } from './mail.controller';
 
 @Module({
   imports: [
-    BullModule.registerQueue({
-      name: 'mail-queue',
-    }),
+    ClientsModule.registerAsync([
+      {
+        name: 'MAIL_SERVICE',
+        imports: [ConfigModule],
+        useFactory: (configService: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [configService.get<string>('rabbitmq.url')!],
+            queue: 'mail_queue',
+            queueOptions: {
+              durable: true,
+            },
+          },
+        }),
+        inject: [ConfigService],
+      },
+    ]),
   ],
-  providers: [MailService, MailProcessor],
+  controllers: [MailController],
+  providers: [MailService],
   exports: [MailService],
 })
 export class MailModule {}

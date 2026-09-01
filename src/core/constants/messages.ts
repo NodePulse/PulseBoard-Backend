@@ -37,6 +37,7 @@ export const RESPONSE_MESSAGES = {
   TENANT: {
     TENANT_SLUG_CONFLICT: 'Tenant slug is already taken',
     USER_ALREADY_HAVE_TENANT: 'You already have a organization.',
+    TENANT_NOT_FOUND: '',
   },
 };
 

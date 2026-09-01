@@ -5,6 +5,8 @@ import redisConfig from './redis.config';
 import mailConfig from './mail.config';
 import razorpayConfig from './razorpay.config';
 
+import rabbitmqConfig from './rabbitmq.config';
+
 export default [
   appConfig,
   databaseConfig,
@@ -12,6 +14,7 @@ export default [
   redisConfig,
   mailConfig,
   razorpayConfig,
+  rabbitmqConfig,
 ];
 
 export {
@@ -21,4 +24,5 @@ export {
   redisConfig,
   mailConfig,
   razorpayConfig,
+  rabbitmqConfig,
 };

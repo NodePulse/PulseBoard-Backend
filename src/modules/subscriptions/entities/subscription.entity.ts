@@ -54,18 +54,18 @@ export class Subscription {
   })
   status: SubscriptionStatus;
 
-  @Column({ type: 'datetime', name: 'current_period_start' })
+  @Column({ type: 'timestamp', name: 'current_period_start' })
   currentPeriodStart: Date;
 
-  @Column({ type: 'datetime', name: 'current_period_end' })
+  @Column({ type: 'timestamp', name: 'current_period_end' })
   currentPeriodEnd: Date;
 
   @Column({ name: 'cancel_at_period_end', default: false })
   cancelAtPeriodEnd: boolean;
 
-  @CreateDateColumn({ type: 'datetime', name: 'created_at' })
+  @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'datetime', name: 'updated_at' })
+  @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
   updatedAt: Date;
 }

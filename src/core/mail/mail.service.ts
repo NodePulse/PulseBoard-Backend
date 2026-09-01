@@ -1,6 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
+import { Injectable, Inject } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
 
 export interface VerificationMailJob {
   to: string;
@@ -9,40 +8,34 @@ export interface VerificationMailJob {
   jobId: string;
 }
 
-const REMOVE_ON_COMPLETE_AGE = 60 * 5; // 5 minutes
-const REMOVE_ON_COMPLETE_COUNT = 10;
-
 @Injectable()
 export class MailService {
   constructor(
-    @InjectQueue('mail-queue')
-    private readonly mailQueue: Queue,
+    @Inject('MAIL_SERVICE') private readonly client: ClientProxy,
   ) {}
 
   async sendVerificationEmail(data: VerificationMailJob) {
-    await this.mailQueue.add('send-verification', data, {
-      jobId: data.jobId,
-      attempts: 3,
-      backoff: {
-        type: 'exponential',
-        delay: 5000,
-      },
-      removeOnComplete: {
-        age: REMOVE_ON_COMPLETE_AGE,
-        count: REMOVE_ON_COMPLETE_COUNT,
-      },
-    });
+    this.client.emit('send-verification', data);
   }
 
-  async removeJob(jobId: string) {
-    const job = await this.mailQueue.getJob(jobId);
-    if (job) {
-      await job.remove();
-    }
+  async sendWelcomeEmail(data: { to: string; name: string }) {
+    this.client.emit('send-welcome', data);
+  }
+
+  async sendPasswordResetEmail(data: { to: string; resetLink: string }) {
+    this.client.emit('send-password-reset', data);
+  }
+
+  async sendTeamInviteEmail(data: {
+    to: string;
+    inviterName: string;
+    teamName: string;
+    inviteLink: string;
+  }) {
+    this.client.emit('send-team-invite', data);
   }
 
   async cleanCompletedJobs() {
-    // Removes up to 1000 completed jobs with a 0ms grace period
-    await this.mailQueue.clean(0, 1000, 'completed');
+    // No-op for RabbitMQ ClientProxy since we aren't using BullMQ locally anymore
   }
 }

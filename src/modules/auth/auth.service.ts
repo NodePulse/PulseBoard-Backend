@@ -430,8 +430,8 @@ export class AuthService {
   public getSessionCookieOptions(maxAge?: number) {
     return {
       httpOnly: true,
-      secure: this.configService.get<string>('app.env') === 'production',
-      sameSite: 'strict' as const,
+      secure: true, // Required by Chrome for SameSite=None even on localhost
+      sameSite: 'none' as const,
       path: '/',
       maxAge: maxAge ?? 60 * 60 * 1000, // 1 hour in ms
     };

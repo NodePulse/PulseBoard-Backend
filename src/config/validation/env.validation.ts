@@ -38,4 +38,6 @@ export default Joi.object({
   SMTP_PASS: Joi.string().required(),
 
   SMTP_FROM_EMAIL: Joi.string().email().required(),
+
+  RABBITMQ_URL: Joi.string().required(),
 });

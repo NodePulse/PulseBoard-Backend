@@ -8,6 +8,7 @@ import { LoggingInterceptor } from './core/interceptors/logging.interceptor';
 import { HttpExceptionFilter } from './core/filters/http-exception.filter';
 import cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -36,7 +37,7 @@ async function bootstrap() {
     }),
   );
   app.enableCors({
-    origin: ['http://localhost:58465'],
+    origin: ['http://localhost:3000'],
     credentials: true,
   });
 
@@ -48,6 +49,19 @@ async function bootstrap() {
     new TransformInterceptor(reflector),
   );
   app.useGlobalFilters(new HttpExceptionFilter());
+
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.RMQ,
+    options: {
+      urls: [configService.get('rabbitmq.url', { infer: true }) as string],
+      queue: 'mail_queue',
+      queueOptions: {
+        durable: true,
+      },
+    },
+  });
+
+  await app.startAllMicroservices();
 
   const PORT = configService.get('app.port', { infer: true });
   await app.listen(PORT);

@@ -5,7 +5,7 @@ import { UsersModule } from './modules/users/users.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { RedisModule } from './core/redis/redis.module';
-import { BullModule } from '@nestjs/bullmq';
+
 import { ConfigService } from '@nestjs/config';
 
 import { SessionModule } from './modules/session/session.module';
@@ -22,34 +22,6 @@ import { CONSOLE_COLORS, MODULE_PREFIXES } from './core/constants/colors';
     DatabaseModule,
     RedisModule,
     SessionModule,
-    BullModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        const config = configService.get('redis');
-        console.log('BullMQ Redis Config:', config);
-        return {
-          connection: {
-            host: config.host,
-            port: config.port,
-            password: config.password || undefined,
-            tls: ['localhost', '127.0.0.1'].includes(config.host)
-              ? undefined
-              : { servername: config.host },
-            enableReadyCheck: false,
-            family: 0,
-            keepAlive: 10000,
-            skipVersionCheck: true,
-            maxRetriesPerRequest: null,
-            retryStrategy(times) {
-              console.warn(
-                `${MODULE_PREFIXES.BULLMQ} ${CONSOLE_COLORS.YELLOW}Redis connection lost. Retrying connection (attempt ${times})...${CONSOLE_COLORS.RESET}`,
-              );
-              return Math.min(times * 100, 10000);
-            },
-          },
-        };
-      },
-    }),
     UsersModule,
     TenantsModule,
     AuthModule,

@@ -68,7 +68,7 @@ export class User {
   @ApiPropertyOptional({ description: 'When the verification token/OTP expires' })
   @Column({
     name: 'verification_expires_at',
-    type: 'datetime',
+    type: 'timestamp',
     nullable: true,
   })
   verificationExpiresAt: Date | null;
@@ -86,14 +86,14 @@ export class User {
   isActive: boolean;
 
   @ApiProperty({ description: 'Creation date' })
-  @CreateDateColumn({ type: 'datetime', name: 'created_at' })
+  @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   createdAt: Date;
 
   @ApiProperty({ description: 'Last update date' })
-  @UpdateDateColumn({ type: 'datetime', name: 'updated_at' })
+  @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
   updatedAt: Date;
 
   @ApiPropertyOptional({ description: 'Deletion date' })
-  @DeleteDateColumn({ type: 'datetime', name: 'deleted_at', nullable: true })
+  @DeleteDateColumn({ type: 'timestamp', name: 'deleted_at', nullable: true })
   deletedAt: Date | null;
 }

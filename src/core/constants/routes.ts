@@ -15,6 +15,7 @@ export const API_ROUTES = {
   TENANTS: {
     ROOT: 'tenants',
     CREATE_ORGANIZATION: 'create-organization',
+    GET_ORGANIZATION: 'current-organization',
   },
   USERS: {
     ROOT: 'users',
