@@ -3,6 +3,7 @@ import { EventPattern, Payload } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import type { VerificationMailJob } from './mail.service';
+import { RABBITMQ_EVENTS } from '../constants/rabbitmq';
 import {
   getVerificationTemplate,
   getWelcomeTemplate,
@@ -44,27 +45,27 @@ export class MailController {
     }
   }
 
-  @EventPattern('send-verification')
+  @EventPattern(RABBITMQ_EVENTS.MAIL.SEND_VERIFICATION)
   async handleSendVerification(@Payload() data: VerificationMailJob) {
     const html = getVerificationTemplate(data.magicLink, data.otp);
     await this.sendEmail(data.to, 'Verify your PulseBoard Account', html);
   }
 
-  @EventPattern('send-welcome')
+  @EventPattern(RABBITMQ_EVENTS.MAIL.SEND_WELCOME)
   async handleSendWelcome(@Payload() data: { to: string; name: string }) {
     const html = getWelcomeTemplate(data.name);
     await this.sendEmail(data.to, 'Welcome to PulseBoard', html);
   }
 
-  @EventPattern('send-password-reset')
+  @EventPattern(RABBITMQ_EVENTS.MAIL.SEND_PASSWORD_RESET)
   async handleSendPasswordReset(
-    @Payload() data: { to: string; resetLink: string },
+    @Payload() data: { to: string; otp: string },
   ) {
-    const html = getPasswordResetTemplate(data.resetLink);
+    const html = getPasswordResetTemplate(data.otp);
     await this.sendEmail(data.to, 'Reset your PulseBoard Password', html);
   }
 
-  @EventPattern('send-team-invite')
+  @EventPattern(RABBITMQ_EVENTS.MAIL.SEND_TEAM_INVITE)
   async handleSendTeamInvite(
     @Payload() data: {
       to: string;

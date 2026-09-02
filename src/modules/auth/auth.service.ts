@@ -12,13 +12,16 @@ import { User } from '../users/entities/user.entity';
 import { Session } from './entities/session.entity';
 import { RegisterUserDTO } from './dto/registerUser.dto';
 import { LoginUserDTO } from './dto/loginUser.dto';
-import { VerifyOtpDTO } from './dto/verifyOtp.dto';
-import { ResendVerificationDTO } from './dto/resendVerification.dto';
+import { SendVerificationDTO } from './dto/sendVerification.dto';
+import { VerifyDTO } from './dto/verify.dto';
 import * as bcrypt from 'bcrypt';
 import {
   RESPONSE_MESSAGES,
+  VALIDATION_MESSAGES,
   VERIFICATION_METHODS,
+  VERIFICATION_TYPES,
 } from '../../core/constants/messages';
+import { REDIS_KEYS } from '../../core/constants/redis';
 import { API_ROUTES } from '../../core/constants/routes';
 import { UserRepository } from '../users/repositories/user.repository';
 import { ConfigService } from '@nestjs/config';
@@ -86,10 +89,7 @@ export class AuthService {
   ): Promise<{ id: string; userEmail: string; isEmailVerified: boolean }> {
     const { email, firstName, lastName, password } = dto;
 
-    const existingUser = await this.userRepository.findByEmailAndTenant(
-      email,
-      null,
-    );
+    const existingUser = await this.userRepository.findUserByEmail(email);
     if (existingUser) {
       throw new ConflictException(RESPONSE_MESSAGES.CONFLICT_EMAIL);
     }
@@ -163,7 +163,7 @@ export class AuthService {
       const isExpired = user.verificationExpiresAt
         ? new Date() > user.verificationExpiresAt
         : true;
-      const resendPath = `/api/${API_ROUTES.AUTH.ROOT}/${API_ROUTES.AUTH.RESEND_VERIFICATION}`;
+      const resendPath = `/api/${API_ROUTES.AUTH.ROOT}/${API_ROUTES.AUTH.SEND_VERIFICATION}`;
       throw new UnauthorizedException({
         message: RESPONSE_MESSAGES.EMAIL_NOT_VERIFIED,
         data: {
@@ -252,104 +252,149 @@ export class AuthService {
   }
 
   // SERVICE
-  public async verifyMagic(token: string): Promise<{ message: string }> {
-    if (!token) {
-      throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
-    }
+  public async sendVerification(dto: SendVerificationDTO): Promise<{ message: string }> {
+    const { email, type, method } = dto;
 
-    const user = await this.userRepository.findOne({
-      where: { verificationToken: token },
-    });
-
-    if (!user) {
-      throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
-    }
-
-    if (user.verificationExpiresAt && new Date() > user.verificationExpiresAt) {
-      throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_EXPIRED);
-    }
-
-    user.isEmailVerified = true;
-    user.verificationToken = null;
-    user.verificationOtp = null;
-    user.verificationExpiresAt = null;
-
-    await this.userRepository.save(user);
-
-    // Immediately prune completed mail jobs from the queue to clean it up
-    await this.mailService.cleanCompletedJobs();
-
-    return { message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS };
-  }
-
-  // SERVICE
-  public async verifyOtp(dto: VerifyOtpDTO): Promise<{ message: string }> {
-    const { email, otp } = dto;
-
-    const user = await this.userRepository.findByEmailAndTenant(email, null);
-    if (!user) {
-      throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
-    }
-
-    const storedOtp = await this.redisService.get(`otp:${email}`);
-    if (!storedOtp || storedOtp !== otp) {
-      throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
-    }
-
-    user.isEmailVerified = true;
-    user.verificationToken = null;
-    user.verificationOtp = null;
-    user.verificationExpiresAt = null;
-
-    await this.userRepository.save(user);
-    await this.redisService.del(`otp:${email}`);
-
-    return { message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS };
-  }
-
-  // SERVICE
-  public async resendVerification(
-    dto: ResendVerificationDTO,
-  ): Promise<{ message: string }> {
-    const { email, method } = dto;
-
-    const user = await this.userRepository.findByEmailAndTenant(email, null);
+    const user = await this.userRepository.findUserByEmail(email);
     if (!user) {
       throw new NotFoundException(RESPONSE_MESSAGES.USER_NOT_FOUND);
     }
 
-    if (user.isEmailVerified) {
-      throw new BadRequestException(RESPONSE_MESSAGES.EMAIL_ALREADY_VERIFIED);
-    }
+    if (type === VERIFICATION_TYPES.SIGNUP) {
+      if (user.isEmailVerified) {
+        throw new BadRequestException(RESPONSE_MESSAGES.EMAIL_ALREADY_VERIFIED);
+      }
 
-    const verificationExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+      const verificationExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
-    let magicLink: string | undefined;
-    let otp: string | undefined;
+      if (method === VERIFICATION_METHODS.MAGIC) {
+        const verificationToken = randomUUID();
+        user.verificationToken = verificationToken;
+        user.verificationOtp = null;
+        user.verificationExpiresAt = verificationExpiresAt;
+        const frontendUrl = this.configService.get<string>('app.frontendUrl');
+        const magicLink = `${frontendUrl}/verify-magic?token=${verificationToken}`;
 
-    if (method === VERIFICATION_METHODS.MAGIC) {
-      const verificationToken = randomUUID();
-      user.verificationToken = verificationToken;
-      user.verificationOtp = null;
-      const frontendUrl = this.configService.get<string>('app.frontendUrl');
-      magicLink = `${frontendUrl}/verify-magic?token=${verificationToken}`;
+        await this.mailService.sendVerificationEmail({
+          to: email,
+          magicLink,
+          jobId: randomUUID(),
+        });
+        await this.userRepository.save(user);
+      } else {
+        const verificationOtp = Math.floor(100000 + Math.random() * 900000).toString();
+        await this.redisService.set(REDIS_KEYS.OTP(email), verificationOtp, 300); // 5 minutes TTL
+        await this.mailService.sendVerificationEmail({
+          to: email,
+          otp: verificationOtp,
+          jobId: randomUUID(),
+        });
+      }
+      return { message: RESPONSE_MESSAGES.RESEND_SUCCESS };
 
-      await this.mailService.sendVerificationEmail({
+    } else if (type === VERIFICATION_TYPES.FORGOT_PASSWORD) {
+      if (method === VERIFICATION_METHODS.MAGIC) {
+        throw new BadRequestException('Magic link not supported for password reset');
+      }
+
+      const resetOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      const hashedOtp = await bcrypt.hash(resetOtp, 10);
+      const nodeEnv = this.configService.get<string>('app.env');
+      const storedOtpObject = {
+        hashedOtp,
+        ...(nodeEnv === 'development' && { resetOtp }),
+      };
+      
+      await this.redisService.set(
+        REDIS_KEYS.PASSWORD_RESET_OTP(email),
+        JSON.stringify(storedOtpObject),
+        300,
+      ); // 5 minutes TTL
+
+      await this.mailService.sendPasswordResetEmail({
         to: email,
-        magicLink,
-        jobId: randomUUID(),
+        otp: resetOtp,
       });
-
-      user.verificationExpiresAt = verificationExpiresAt;
-      await this.userRepository.save(user);
-    } else {
-      const verificationOtp = Math.floor(
-        100000 + Math.random() * 900000,
-      ).toString();
-      await this.redisService.set(`otp:${email}`, verificationOtp, 300); // 5 minutes TTL
+      return { message: RESPONSE_MESSAGES.AUTH.FORGOT_PASSWORD_SUCCESS };
     }
 
-    return { message: RESPONSE_MESSAGES.RESEND_SUCCESS };
+    throw new BadRequestException(VALIDATION_MESSAGES.TYPE_INVALID('Type'));
+  }
+
+  // SERVICE
+  public async verify(dto: VerifyDTO): Promise<{ message: string }> {
+    const { email, code, type, method } = dto;
+
+    if (type === VERIFICATION_TYPES.SIGNUP) {
+      if (method === VERIFICATION_METHODS.MAGIC) {
+        const user = await this.userRepository.findOne({
+          where: { verificationToken: code },
+        });
+
+        if (!user) {
+          throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
+        }
+
+        if (user.verificationExpiresAt && new Date() > user.verificationExpiresAt) {
+          throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_EXPIRED);
+        }
+
+        user.isEmailVerified = true;
+        user.verificationToken = null;
+        user.verificationOtp = null;
+        user.verificationExpiresAt = null;
+
+        await this.userRepository.save(user);
+        await this.mailService.cleanCompletedJobs();
+        return { message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS };
+
+      } else {
+        if (!email) throw new BadRequestException(VALIDATION_MESSAGES.REQUIRED('Email'));
+        const user = await this.userRepository.findUserByEmail(email);
+        if (!user) throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
+
+        const storedOtp = await this.redisService.get(REDIS_KEYS.OTP(email));
+        if (!storedOtp || storedOtp !== code) {
+          throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
+        }
+
+        user.isEmailVerified = true;
+        user.verificationToken = null;
+        user.verificationOtp = null;
+        user.verificationExpiresAt = null;
+
+        await this.userRepository.save(user);
+        await this.redisService.del(REDIS_KEYS.OTP(email));
+        return { message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS };
+      }
+    } else if (type === VERIFICATION_TYPES.FORGOT_PASSWORD) {
+       if (!email) throw new BadRequestException(VALIDATION_MESSAGES.REQUIRED('Email'));
+       const user = await this.userRepository.findUserByEmail(email);
+       if (!user) throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
+
+       const storedOtpData = await this.redisService.get(REDIS_KEYS.PASSWORD_RESET_OTP(email));
+       if (!storedOtpData) {
+         throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_EXPIRED);
+       }
+
+       let hashedOtp: string;
+       try {
+         const parsed = JSON.parse(storedOtpData);
+         hashedOtp = parsed.hashedOtp;
+       } catch {
+         throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
+       }
+
+       const isValid = await bcrypt.compare(code, hashedOtp);
+       if (!isValid) {
+         throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
+       }
+
+       // We don't delete the OTP here because they need it to reset the password.
+       return { message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS };
+    }
+
+    throw new BadRequestException(VALIDATION_MESSAGES.TYPE_INVALID('Type'));
   }
 
   // SERVICE
@@ -413,7 +458,7 @@ export class AuthService {
   public async generateCsrfToken(userId: string): Promise<string> {
     const token = randomUUID();
     // Store in Redis with 1-hour TTL, keyed by userId
-    await this.redisService.set(`csrf:${userId}`, token, 3600);
+    await this.redisService.set(REDIS_KEYS.CSRF(userId), token, 3600);
     return token;
   }
 
@@ -422,7 +467,7 @@ export class AuthService {
     userId: string,
     token: string,
   ): Promise<boolean> {
-    const stored = await this.redisService.get(`csrf:${userId}`);
+    const stored = await this.redisService.get(REDIS_KEYS.CSRF(userId));
     return stored === token;
   }
 
@@ -436,4 +481,6 @@ export class AuthService {
       maxAge: maxAge ?? 60 * 60 * 1000, // 1 hour in ms
     };
   }
+
+
 }

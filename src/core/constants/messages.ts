@@ -6,6 +6,7 @@ export const RESPONSE_MESSAGES = {
     FORBIDDEN:
       'Your account is inactive. Please contact support for assistance.',
     TOO_MANY_REQUESTS: 'Too many login attempts - rate limited.',
+    FORGOT_PASSWORD_SUCCESS: 'OTP has been sent to email successfully',
   },
   SUCCESS: 'Request successful',
   INTERNAL_SERVER_ERROR: 'Internal server error',
@@ -52,9 +53,15 @@ export const VALIDATION_MESSAGES = {
   SLUG_FORMAT: (field: string) =>
     `${field} must contain only lowercase letters, numbers, and hyphens`,
   METHOD_INVALID: (field: string) => `${field} must be either magic or otp`,
+  TYPE_INVALID: (field: string) => `${field} must be a valid verification type`,
 };
 
 export const VERIFICATION_METHODS = {
   MAGIC: 'magic',
   OTP: 'otp',
+};
+
+export const VERIFICATION_TYPES = {
+  SIGNUP: 'signup',
+  FORGOT_PASSWORD: 'forgot_password',
 };

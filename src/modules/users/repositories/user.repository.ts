@@ -8,14 +8,10 @@ export class UserRepository extends Repository<User> {
     super(User, dataSource.createEntityManager());
   }
 
-  public async findByEmailAndTenant(
-    email: string,
-    tenantId: string | null,
-  ): Promise<User | null> {
+  public async findUserByEmail(email: string): Promise<User | null> {
     return this.findOne({
       where: {
         email,
-        tenantId: tenantId === null ? IsNull() : tenantId,
       },
     });
   }

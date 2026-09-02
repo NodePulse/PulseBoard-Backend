@@ -1,5 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import { RABBITMQ_EVENTS } from '../constants/rabbitmq';
 
 export interface VerificationMailJob {
   to: string;
@@ -15,15 +16,15 @@ export class MailService {
   ) {}
 
   async sendVerificationEmail(data: VerificationMailJob) {
-    this.client.emit('send-verification', data);
+    this.client.emit(RABBITMQ_EVENTS.MAIL.SEND_VERIFICATION, data);
   }
 
   async sendWelcomeEmail(data: { to: string; name: string }) {
-    this.client.emit('send-welcome', data);
+    this.client.emit(RABBITMQ_EVENTS.MAIL.SEND_WELCOME, data);
   }
 
-  async sendPasswordResetEmail(data: { to: string; resetLink: string }) {
-    this.client.emit('send-password-reset', data);
+  async sendPasswordResetEmail(data: { to: string; resetLink?: string; otp?: string }) {
+    this.client.emit(RABBITMQ_EVENTS.MAIL.SEND_PASSWORD_RESET, data);
   }
 
   async sendTeamInviteEmail(data: {
@@ -32,7 +33,7 @@ export class MailService {
     teamName: string;
     inviteLink: string;
   }) {
-    this.client.emit('send-team-invite', data);
+    this.client.emit(RABBITMQ_EVENTS.MAIL.SEND_TEAM_INVITE, data);
   }
 
   async cleanCompletedJobs() {

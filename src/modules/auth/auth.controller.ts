@@ -15,8 +15,8 @@ import { AuthService } from './auth.service';
 import { ApiEndpoint } from '../../core/decorators/api-endpoint.decorator';
 import { RegisterUserDTO } from './dto/registerUser.dto';
 import { LoginUserDTO } from './dto/loginUser.dto';
-import { VerifyOtpDTO } from './dto/verifyOtp.dto';
-import { ResendVerificationDTO } from './dto/resendVerification.dto';
+import { SendVerificationDTO } from './dto/sendVerification.dto';
+import { VerifyDTO } from './dto/verify.dto';
 import { API_ROUTES } from '../../core/constants/routes';
 import { ResponseMessage } from '../../core/decorators/response-message.decorator';
 import { RESPONSE_MESSAGES } from '../../core/constants/messages';
@@ -25,6 +25,41 @@ import { CurrentUser } from '../../core/decorators/current-user.decorator';
 import type { Request, Response } from 'express';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { User } from '../users/entities/user.entity';
+import {
+  Throttle,
+  ThrottlerGuard,
+  ThrottlerException,
+  ThrottlerLimitDetail,
+} from '@nestjs/throttler';
+import {
+  ExecutionContext,
+  Injectable,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
+
+@Injectable()
+export class ForgotPasswordThrottlerGuard extends ThrottlerGuard {
+  protected async getTracker(req: Record<string, any>): Promise<string> {
+    // throttle per email+IP combo so one victim's email can't be hammered from many IPs alone
+    const email = req.body?.email?.toLowerCase()?.trim() ?? 'unknown';
+    return `${req.ip}-${email}`;
+  }
+
+  protected async throwThrottlingException(
+    context: ExecutionContext,
+    throttlerLimitDetail: ThrottlerLimitDetail,
+  ): Promise<void> {
+    const seconds = throttlerLimitDetail.timeToExpire % 60;
+    const minutes = Math.floor(throttlerLimitDetail.timeToExpire / 60);
+    throw new HttpException(
+      `You have exceeded the maximum number of attempts. Please try again after ${
+        minutes ? minutes + ' minutes ' : ''
+      } ${seconds ? seconds + ' seconds' : ''}`,
+      HttpStatus.TOO_MANY_REQUESTS,
+    );
+  }
+}
 
 const SESSION_COOKIE_NAME = 'pulseboard_session';
 
@@ -37,6 +72,7 @@ export interface SessionPayload {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  // CONTROLLER
   @ApiTags('Authentication')
   @ApiOperation({
     summary: 'Register a new user',
@@ -58,6 +94,7 @@ export class AuthController {
     return { user };
   }
 
+  // CONTROLLER
   @ApiTags('Authentication')
   @ApiOperation({
     summary: 'Login with email and password',
@@ -102,6 +139,7 @@ export class AuthController {
     return { user };
   }
 
+  // CONTROLLER
   @ApiTags('Authentication')
   @ApiOperation({
     summary: 'Logout a user',
@@ -130,6 +168,7 @@ export class AuthController {
     return true;
   }
 
+  // CONTROLLER
   @ApiTags('Authentication')
   @ApiOperation({
     summary: 'Get current user information',
@@ -148,6 +187,19 @@ export class AuthController {
     return this.authService.getMe(user.sub);
   }
 
+  // CONTROLLER
+  @ApiTags('Authentication')
+  @ApiOperation({
+    summary: 'Generate CSRF token',
+    description: 'Generate CSRF token',
+  })
+  @ApiEndpoint({
+    201: {
+      type: { csrfToken: String },
+      message: 'CSRF token generated',
+    },
+    401: RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN,
+  })
   @Get(API_ROUTES.AUTH.CSRF_TOKEN)
   @UseGuards(SessionGuard)
   @ResponseMessage('CSRF token generated')
@@ -156,57 +208,58 @@ export class AuthController {
     return { csrfToken: token };
   }
 
+  // CONTROLLER
   @ApiTags('Authentication')
   @ApiOperation({
-    summary: 'Verify magic token',
-    description: 'Verify magic token',
+    summary: 'Send Verification (OTP or Magic Link)',
+    description: 'Send verification for Signup or Forgot Password',
   })
   @ApiEndpoint({
     200: {
-      type: { user: User },
-      message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS,
-    },
-    401: RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN,
-  })
-  @Get(API_ROUTES.AUTH.VERIFY_MAGIC)
-  public async verifyMagic(@Query('token') token: string) {
-    return this.authService.verifyMagic(token);
-  }
-
-  @ApiTags('Authentication')
-  @ApiOperation({
-    summary: 'Verify OTP',
-    description: 'Verify OTP',
-  })
-  @ApiEndpoint({
-    200: {
-      type: { user: User },
-      message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS,
-    },
-    401: RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN,
-  })
-  @Post(API_ROUTES.AUTH.VERIFY_OTP)
-  public async verifyOtp(@Body() dto: VerifyOtpDTO) {
-    return this.authService.verifyOtp(dto);
-  }
-
-  @ApiTags('Authentication')
-  @ApiOperation({
-    summary: 'Resend verification',
-    description: 'Resend verification',
-  })
-  @ApiEndpoint({
-    200: {
-      type: { user: User },
+      type: { message: String },
       message: RESPONSE_MESSAGES.RESEND_SUCCESS,
     },
-    401: RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN,
+    400: RESPONSE_MESSAGES.AUTH.VALIDATION_ERROR,
+    404: RESPONSE_MESSAGES.USER_NOT_FOUND,
   })
-  @Post(API_ROUTES.AUTH.RESEND_VERIFICATION)
-  public async resendVerification(@Body() dto: ResendVerificationDTO) {
-    return this.authService.resendVerification(dto);
+  @Post(API_ROUTES.AUTH.SEND_VERIFICATION)
+  @UseGuards(ForgotPasswordThrottlerGuard)
+  @Throttle({ default: { limit: 3, ttl: 900000 } })
+  public async sendVerification(@Body() dto: SendVerificationDTO) {
+    return this.authService.sendVerification(dto);
   }
 
+  // CONTROLLER
+  @ApiTags('Authentication')
+  @ApiOperation({
+    summary: 'Verify Code (OTP or Magic Link Token)',
+    description: 'Verify code for Signup or Forgot Password',
+  })
+  @ApiEndpoint({
+    200: {
+      type: { message: String },
+      message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS,
+    },
+    400: RESPONSE_MESSAGES.VERIFICATION_INVALID,
+  })
+  @Post(API_ROUTES.AUTH.VERIFY)
+  public async verify(@Body() dto: VerifyDTO) {
+    return this.authService.verify(dto);
+  }
+
+  // CONTROLLER
+  @ApiTags('Authentication')
+  @ApiOperation({
+    summary: 'Get active sessions',
+    description: 'Get active sessions',
+  })
+  @ApiEndpoint({
+    200: {
+      type: { sessions: User },
+      message: 'Active sessions retrieved successfully',
+    },
+    401: RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN,
+  })
   @Get(API_ROUTES.AUTH.SESSIONS)
   @UseGuards(SessionGuard)
   @ResponseMessage('Active sessions retrieved successfully')
@@ -214,6 +267,19 @@ export class AuthController {
     return this.authService.getActiveSessions(user.sub);
   }
 
+  // CONTROLLER
+  @ApiTags('Authentication')
+  @ApiOperation({
+    summary: 'Revoke session',
+    description: 'Revoke session',
+  })
+  @ApiEndpoint({
+    200: {
+      type: { user: User },
+      message: RESPONSE_MESSAGES.SESSION_REVOKED,
+    },
+    401: RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN,
+  })
   @Delete(`${API_ROUTES.AUTH.SESSIONS}/:id`)
   @UseGuards(SessionGuard)
   @ResponseMessage(RESPONSE_MESSAGES.SESSION_REVOKED)
@@ -224,4 +290,6 @@ export class AuthController {
     await this.authService.revokeSession(user.sub, id);
     return true;
   }
+
+
 }

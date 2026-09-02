@@ -134,14 +134,15 @@ export const getWelcomeTemplate = (name: string) => {
     return baseEmailTemplate('Welcome to PulseBoard', content);
 };
 
-export const getPasswordResetTemplate = (resetLink: string) => {
+export const getPasswordResetTemplate = (otp: string) => {
     const content = `
     <h2>Reset Your Password</h2>
     <p>We received a request to reset the password for your PulseBoard account.</p>
-    <p>Click the button below to choose a new password:</p>
-    <center>
-        <a href="${resetLink}" class="btn">Reset Password</a>
-    </center>
+    <p>Use the following One-Time Password (OTP) to reset your password:</p>
+    <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 24px; letter-spacing: 5px; font-weight: bold; margin: 20px 0; border-radius: 8px;">
+        ${otp}
+    </div>
+    <p>This code will expire in 5 minutes.</p>
     <p>If you didn't request a password reset, you can safely ignore this email.</p>
     `;
     return baseEmailTemplate('Reset your PulseBoard Password', content);
