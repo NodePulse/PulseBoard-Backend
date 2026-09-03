@@ -18,13 +18,37 @@ export class UserRepository extends Repository<User> {
 
   public async findByEmailWithPassword(
     email: string,
-    tenantId: string | null,
+    tenantId: string | null = null,
   ): Promise<User | null> {
     return this.findOne({
       where: {
         email,
         tenantId: tenantId === null ? IsNull() : tenantId,
       },
+      select: {
+        id: true,
+        tenantId: true,
+        email: true,
+        passwordHash: true,
+        firstName: true,
+        lastName: true,
+        avatarUrl: true,
+        isEmailVerified: true,
+        verificationToken: true,
+        verificationOtp: true,
+        verificationExpiresAt: true,
+        workspaceRole: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        deletedAt: true,
+      },
+    });
+  }
+
+  public async findByIdWithPassword(id: string): Promise<User | null> {
+    return this.findOne({
+      where: { id },
       select: {
         id: true,
         tenantId: true,

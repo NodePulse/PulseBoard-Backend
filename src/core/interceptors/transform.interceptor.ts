@@ -19,27 +19,44 @@ export interface Response<T> {
 
 @Injectable()
 export class TransformInterceptor<T>
-  implements NestInterceptor<T, Response<T>>
+  implements NestInterceptor<T, Response<unknown>>
 {
   constructor(private reflector: Reflector) {}
 
   intercept(
     context: ExecutionContext,
     next: CallHandler,
-  ): Observable<Response<T>> {
+  ): Observable<Response<unknown>> {
     const response = context.switchToHttp().getResponse();
     const statusCode = response.statusCode;
-    const message =
-      this.reflector.get<string>(RESPONSE_MESSAGE_KEY, context.getHandler()) ||
-      RESPONSE_MESSAGES.SUCCESS;
+    const decoratorMessage = this.reflector.get<string>(
+      RESPONSE_MESSAGE_KEY,
+      context.getHandler(),
+    );
 
     return next.handle().pipe(
-      map((data) => ({
-        success: true,
-        statusCode,
-        message,
-        data,
-      })),
+      map((data: unknown) => {
+        let message = decoratorMessage || RESPONSE_MESSAGES.SUCCESS;
+        let finalData: unknown = data;
+
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
+          const dataObj = data as Record<string, unknown>;
+          if ('message' in dataObj && typeof dataObj.message === 'string') {
+            if (!decoratorMessage) {
+              message = dataObj.message;
+            }
+            const { message: _, ...rest } = dataObj;
+            finalData = Object.keys(rest).length > 0 ? rest : null;
+          }
+        }
+
+        return {
+          success: true,
+          statusCode,
+          message,
+          data: finalData,
+        };
+      }),
     );
   }
 }

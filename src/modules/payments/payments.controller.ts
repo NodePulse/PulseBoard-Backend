@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { SessionGuard } from 'src/core/guards/session.guard';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentOrderDto } from './dto/createPaymentOrder.dto';

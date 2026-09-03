@@ -14,6 +14,7 @@ import { RegisterUserDTO } from './dto/registerUser.dto';
 import { LoginUserDTO } from './dto/loginUser.dto';
 import { SendVerificationDTO } from './dto/sendVerification.dto';
 import { VerifyDTO } from './dto/verify.dto';
+import { UpdatePasswordDTO } from './dto/updatePassword.dto';
 import * as bcrypt from 'bcrypt';
 import {
   RESPONSE_MESSAGES,
@@ -25,7 +26,7 @@ import { REDIS_KEYS } from '../../core/constants/redis';
 import { API_ROUTES } from '../../core/constants/routes';
 import { UserRepository } from '../users/repositories/user.repository';
 import { ConfigService } from '@nestjs/config';
-import { randomUUID } from 'crypto';
+import { randomUUID, randomInt } from 'crypto';
 import { RedisService } from 'src/core/redis/redis.service';
 import { MailService } from 'src/core/mail/mail.service';
 import { SessionCacheService } from '../session/session-cache.service';
@@ -41,6 +42,10 @@ export class AuthService {
     private readonly mailService: MailService,
     private readonly sessionCacheService: SessionCacheService,
   ) {}
+
+  private generateSecureOtp(): string {
+    return randomInt(100000, 1000000).toString();
+  }
 
   // FUNC
   private parseUserAgent(userAgentString?: string) {
@@ -84,9 +89,22 @@ export class AuthService {
   }
 
   // SERVICE
-  public async registerUser(
-    dto: RegisterUserDTO,
-  ): Promise<{ id: string; userEmail: string; isEmailVerified: boolean }> {
+  public async registerUser(dto: RegisterUserDTO): Promise<{
+    message: string;
+    user: {
+      id: string;
+      email: string;
+      firstName: string | null;
+      lastName: string | null;
+      isEmailVerified: boolean;
+    };
+    verification: {
+      sent: boolean;
+      method: string;
+      expiresIn: number;
+      expiresAt: string;
+    };
+  }> {
     const { email, firstName, lastName, password } = dto;
 
     const existingUser = await this.userRepository.findUserByEmail(email);
@@ -121,9 +139,23 @@ export class AuthService {
       magicLink,
       jobId: randomUUID(),
     });
-    const { id, email: userEmail, isEmailVerified } = savedUser;
 
-    return { id, userEmail, isEmailVerified };
+    return {
+      message: RESPONSE_MESSAGES.USER_REGISTERED,
+      user: {
+        id: savedUser.id,
+        email: savedUser.email,
+        firstName: savedUser.firstName || null,
+        lastName: savedUser.lastName || null,
+        isEmailVerified: savedUser.isEmailVerified,
+      },
+      verification: {
+        sent: true,
+        method: VERIFICATION_METHODS.MAGIC,
+        expiresIn: 300,
+        expiresAt: verificationExpiresAt.toISOString(),
+      },
+    };
   }
 
   // SERVICE
@@ -226,7 +258,7 @@ export class AuthService {
     await this.sessionCacheService.set(savedSession);
 
     // Strip passwordHash from response
-    const { passwordHash, ...userResponse } = user;
+    const { passwordHash: _, ...userResponse } = user;
     Logger.log('User logged in successfully', userResponse);
 
     return { sessionId: savedSession.id, user: userResponse };
@@ -252,20 +284,39 @@ export class AuthService {
   }
 
   // SERVICE
-  public async sendVerification(dto: SendVerificationDTO): Promise<{ message: string }> {
+  public async sendVerification(dto: SendVerificationDTO): Promise<{
+    message: string;
+    email: string;
+    type: string;
+    method: string;
+    expiresIn: number;
+    expiresAt: string;
+    resendCooldown: number;
+  }> {
     const { email, type, method } = dto;
 
     const user = await this.userRepository.findUserByEmail(email);
+    const expiresIn = 300; // 5 minutes in seconds
+    const resendCooldown = 60; // 1 minute cooldown
+    const verificationExpiresAt = new Date(Date.now() + expiresIn * 1000);
+
+    // Defense against email enumeration: return generic success without revealing non-existent email
     if (!user) {
-      throw new NotFoundException(RESPONSE_MESSAGES.USER_NOT_FOUND);
+      return {
+        message: 'If an account exists with this email, a verification message has been sent.',
+        email,
+        type,
+        method: method || VERIFICATION_METHODS.OTP,
+        expiresIn,
+        expiresAt: verificationExpiresAt.toISOString(),
+        resendCooldown,
+      };
     }
 
     if (type === VERIFICATION_TYPES.SIGNUP) {
       if (user.isEmailVerified) {
         throw new BadRequestException(RESPONSE_MESSAGES.EMAIL_ALREADY_VERIFIED);
       }
-
-      const verificationExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
       if (method === VERIFICATION_METHODS.MAGIC) {
         const verificationToken = randomUUID();
@@ -281,49 +332,95 @@ export class AuthService {
           jobId: randomUUID(),
         });
         await this.userRepository.save(user);
+
+        return {
+          message: 'Verification magic link sent successfully to email',
+          email,
+          type,
+          method,
+          expiresIn,
+          expiresAt: verificationExpiresAt.toISOString(),
+          resendCooldown,
+        };
       } else {
-        const verificationOtp = Math.floor(100000 + Math.random() * 900000).toString();
-        await this.redisService.set(REDIS_KEYS.OTP(email), verificationOtp, 300); // 5 minutes TTL
+        const verificationOtp = this.generateSecureOtp();
+        const hashedOtp = await bcrypt.hash(verificationOtp, 10);
+
+        // Store hashed OTP in Redis securely
+        await this.redisService.set(
+          REDIS_KEYS.OTP(email),
+          hashedOtp,
+          expiresIn,
+        );
+
+        // Reset attempt counter
+        await this.redisService.del(REDIS_KEYS.OTP_ATTEMPTS(email));
+
         await this.mailService.sendVerificationEmail({
           to: email,
           otp: verificationOtp,
           jobId: randomUUID(),
         });
-      }
-      return { message: RESPONSE_MESSAGES.RESEND_SUCCESS };
 
+        return {
+          message: 'Verification OTP code sent successfully to email',
+          email,
+          type,
+          method,
+          expiresIn,
+          expiresAt: verificationExpiresAt.toISOString(),
+          resendCooldown,
+        };
+      }
     } else if (type === VERIFICATION_TYPES.FORGOT_PASSWORD) {
       if (method === VERIFICATION_METHODS.MAGIC) {
-        throw new BadRequestException('Magic link not supported for password reset');
+        throw new BadRequestException(
+          'Magic link not supported for password reset',
+        );
       }
 
-      const resetOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      const resetOtp = this.generateSecureOtp();
       const hashedOtp = await bcrypt.hash(resetOtp, 10);
-      const nodeEnv = this.configService.get<string>('app.env');
-      const storedOtpObject = {
-        hashedOtp,
-        ...(nodeEnv === 'development' && { resetOtp }),
-      };
-      
+
       await this.redisService.set(
         REDIS_KEYS.PASSWORD_RESET_OTP(email),
-        JSON.stringify(storedOtpObject),
-        300,
-      ); // 5 minutes TTL
+        hashedOtp,
+        expiresIn,
+      );
+
+      // Reset attempt counter
+      await this.redisService.del(REDIS_KEYS.OTP_ATTEMPTS(email));
 
       await this.mailService.sendPasswordResetEmail({
         to: email,
         otp: resetOtp,
       });
-      return { message: RESPONSE_MESSAGES.AUTH.FORGOT_PASSWORD_SUCCESS };
+
+      return {
+        message: RESPONSE_MESSAGES.AUTH.FORGOT_PASSWORD_SUCCESS,
+        email,
+        type,
+        method: method || VERIFICATION_METHODS.OTP,
+        expiresIn,
+        expiresAt: verificationExpiresAt.toISOString(),
+        resendCooldown,
+      };
     }
 
     throw new BadRequestException(VALIDATION_MESSAGES.TYPE_INVALID('Type'));
   }
 
   // SERVICE
-  public async verify(dto: VerifyDTO): Promise<{ message: string }> {
+  public async verify(dto: VerifyDTO): Promise<{
+    message: string;
+    email?: string;
+    type: string;
+    method?: string;
+    verified: boolean;
+    verifiedAt: string;
+  }> {
     const { email, code, type, method } = dto;
+    const verifiedAt = new Date().toISOString();
 
     if (type === VERIFICATION_TYPES.SIGNUP) {
       if (method === VERIFICATION_METHODS.MAGIC) {
@@ -335,7 +432,10 @@ export class AuthService {
           throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
         }
 
-        if (user.verificationExpiresAt && new Date() > user.verificationExpiresAt) {
+        if (
+          user.verificationExpiresAt &&
+          new Date() > user.verificationExpiresAt
+        ) {
           throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_EXPIRED);
         }
 
@@ -346,15 +446,51 @@ export class AuthService {
 
         await this.userRepository.save(user);
         await this.mailService.cleanCompletedJobs();
-        return { message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS };
 
+        return {
+          message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS,
+          email: user.email,
+          type,
+          method,
+          verified: true,
+          verifiedAt,
+        };
       } else {
-        if (!email) throw new BadRequestException(VALIDATION_MESSAGES.REQUIRED('Email'));
+        if (!email)
+          throw new BadRequestException(VALIDATION_MESSAGES.REQUIRED('Email'));
         const user = await this.userRepository.findUserByEmail(email);
-        if (!user) throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
+        if (!user)
+          throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
 
-        const storedOtp = await this.redisService.get(REDIS_KEYS.OTP(email));
-        if (!storedOtp || storedOtp !== code) {
+        const storedHashedOtp = await this.redisService.get(
+          REDIS_KEYS.OTP(email),
+        );
+        if (!storedHashedOtp) {
+          throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_EXPIRED);
+        }
+
+        // Brute-force protection: Check failed attempts (max 5)
+        const attemptsKey = REDIS_KEYS.OTP_ATTEMPTS(email);
+        const attempts = parseInt(
+          (await this.redisService.get(attemptsKey)) || '0',
+          10,
+        );
+
+        if (attempts >= 5) {
+          await this.redisService.del(REDIS_KEYS.OTP(email));
+          await this.redisService.del(attemptsKey);
+          throw new BadRequestException(
+            'Too many failed attempts. Verification code invalidated. Please request a new code.',
+          );
+        }
+
+        const isValid = await bcrypt.compare(code, storedHashedOtp);
+        if (!isValid) {
+          await this.redisService.set(
+            attemptsKey,
+            (attempts + 1).toString(),
+            300,
+          );
           throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
         }
 
@@ -365,33 +501,74 @@ export class AuthService {
 
         await this.userRepository.save(user);
         await this.redisService.del(REDIS_KEYS.OTP(email));
-        return { message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS };
+        await this.redisService.del(attemptsKey);
+
+        return {
+          message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS,
+          email,
+          type,
+          method,
+          verified: true,
+          verifiedAt,
+        };
       }
     } else if (type === VERIFICATION_TYPES.FORGOT_PASSWORD) {
-       if (!email) throw new BadRequestException(VALIDATION_MESSAGES.REQUIRED('Email'));
-       const user = await this.userRepository.findUserByEmail(email);
-       if (!user) throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
+      if (!email)
+        throw new BadRequestException(VALIDATION_MESSAGES.REQUIRED('Email'));
+      const user = await this.userRepository.findUserByEmail(email);
+      if (!user)
+        throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
 
-       const storedOtpData = await this.redisService.get(REDIS_KEYS.PASSWORD_RESET_OTP(email));
-       if (!storedOtpData) {
-         throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_EXPIRED);
-       }
+      const storedHashedOtp = await this.redisService.get(
+        REDIS_KEYS.PASSWORD_RESET_OTP(email),
+      );
+      if (!storedHashedOtp) {
+        throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_EXPIRED);
+      }
 
-       let hashedOtp: string;
-       try {
-         const parsed = JSON.parse(storedOtpData);
-         hashedOtp = parsed.hashedOtp;
-       } catch {
-         throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
-       }
+      // Brute-force protection: Check failed attempts (max 5)
+      const attemptsKey = REDIS_KEYS.OTP_ATTEMPTS(email);
+      const attempts = parseInt(
+        (await this.redisService.get(attemptsKey)) || '0',
+        10,
+      );
 
-       const isValid = await bcrypt.compare(code, hashedOtp);
-       if (!isValid) {
-         throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
-       }
+      if (attempts >= 5) {
+        await this.redisService.del(REDIS_KEYS.PASSWORD_RESET_OTP(email));
+        await this.redisService.del(attemptsKey);
+        throw new BadRequestException(
+          'Too many failed attempts. Verification code invalidated. Please request a new code.',
+        );
+      }
 
-       // We don't delete the OTP here because they need it to reset the password.
-       return { message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS };
+      let hashedOtp = storedHashedOtp;
+      if (storedHashedOtp.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(storedHashedOtp);
+          hashedOtp = parsed.hashedOtp;
+        } catch {}
+      }
+
+      const isValid = await bcrypt.compare(code, hashedOtp);
+      if (!isValid) {
+        await this.redisService.set(
+          attemptsKey,
+          (attempts + 1).toString(),
+          300,
+        );
+        throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
+      }
+
+      await this.redisService.del(attemptsKey);
+
+      return {
+        message: 'Password reset code verified successfully',
+        email,
+        type,
+        method: method || VERIFICATION_METHODS.OTP,
+        verified: true,
+        verifiedAt,
+      };
     }
 
     throw new BadRequestException(VALIDATION_MESSAGES.TYPE_INVALID('Type'));
@@ -450,7 +627,7 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException(RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN);
     }
-    const { passwordHash, ...userResponse } = user;
+    const { passwordHash: _, ...userResponse } = user;
     return userResponse;
   }
 
@@ -471,6 +648,136 @@ export class AuthService {
     return stored === token;
   }
 
+  // SERVICE — Unified Password Management (Reset via OTP OR Change via Current Password)
+  public async resetPassword(
+    dto: UpdatePasswordDTO,
+    currentUserSub?: string,
+  ): Promise<{ message: string; updatedAt: string }> {
+    const { mode, email, code, currentPassword, newPassword } = dto;
+    const updatedAt = new Date().toISOString();
+
+    // Mode 1: Change Password (In-App Authenticated Settings Flow)
+    if (mode === 'change') {
+      if (!currentUserSub) {
+        throw new UnauthorizedException(
+          'Authentication required to change password',
+        );
+      }
+
+      if (!currentPassword) {
+        throw new BadRequestException('Current password is required');
+      }
+
+      const user = await this.userRepository.findByIdWithPassword(currentUserSub);
+      if (!user) {
+        throw new NotFoundException(RESPONSE_MESSAGES.USER_NOT_FOUND);
+      }
+
+      const isPasswordValid = await bcrypt.compare(
+        currentPassword,
+        user.passwordHash || '',
+      );
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('Current password is incorrect');
+      }
+
+      if (currentPassword === newPassword) {
+        throw new BadRequestException(
+          'New password must be different from current password',
+        );
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(newPassword, salt);
+      await this.userRepository.update({ id: user.id }, { passwordHash });
+
+      return {
+        message: 'Password updated successfully',
+        updatedAt,
+      };
+    }
+
+    // Mode 2: Forgot Password Reset (Unauthenticated OTP Flow)
+    if (mode === 'forgot') {
+      if (!email || !code) {
+        throw new BadRequestException(
+          'Email and verification code are required for password reset',
+        );
+      }
+
+      const user = await this.userRepository.findUserByEmail(email);
+      if (!user) {
+        throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
+      }
+
+      const storedHashedOtp = await this.redisService.get(
+        REDIS_KEYS.PASSWORD_RESET_OTP(email),
+      );
+
+      if (!storedHashedOtp) {
+        throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_EXPIRED);
+      }
+
+      // Check failed attempts (max 5)
+      const attemptsKey = REDIS_KEYS.OTP_ATTEMPTS(email);
+      const attempts = parseInt(
+        (await this.redisService.get(attemptsKey)) || '0',
+        10,
+      );
+
+      if (attempts >= 5) {
+        await this.redisService.del(REDIS_KEYS.PASSWORD_RESET_OTP(email));
+        await this.redisService.del(attemptsKey);
+        throw new BadRequestException(
+          'Too many failed attempts. Verification code invalidated. Please request a new code.',
+        );
+      }
+
+      let hashedOtp = storedHashedOtp;
+      if (storedHashedOtp.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(storedHashedOtp);
+          hashedOtp = parsed.hashedOtp;
+        } catch {}
+      }
+
+      const isValid = await bcrypt.compare(code, hashedOtp);
+      if (!isValid) {
+        await this.redisService.set(
+          attemptsKey,
+          (attempts + 1).toString(),
+          300,
+        );
+        throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
+      }
+
+      // Update password explicitly using update query
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(newPassword, salt);
+      await this.userRepository.update({ id: user.id }, { passwordHash });
+
+      // Clean up Redis keys
+      await this.redisService.del(REDIS_KEYS.PASSWORD_RESET_OTP(email));
+      await this.redisService.del(attemptsKey);
+
+      // Revoke all active sessions for security
+      await this.logoutAll(user.id);
+
+      return {
+        message: 'Password reset successfully. Please log in with your new password.',
+        updatedAt,
+      };
+    }
+
+    throw new BadRequestException(
+      'Invalid mode. Mode must be either "forgot" or "change"',
+    );
+  }
+
+  public async getSessionById(sessionId: string): Promise<Session | null> {
+    return this.sessionRepository.findOne({ where: { id: sessionId } });
+  }
+
   // HELPER — HttpOnly cookie options for session
   public getSessionCookieOptions(maxAge?: number) {
     return {
@@ -481,6 +788,4 @@ export class AuthService {
       maxAge: maxAge ?? 60 * 60 * 1000, // 1 hour in ms
     };
   }
-
-
 }

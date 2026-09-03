@@ -11,9 +11,7 @@ export interface VerificationMailJob {
 
 @Injectable()
 export class MailService {
-  constructor(
-    @Inject('MAIL_SERVICE') private readonly client: ClientProxy,
-  ) {}
+  constructor(@Inject('MAIL_SERVICE') private readonly client: ClientProxy) {}
 
   async sendVerificationEmail(data: VerificationMailJob) {
     this.client.emit(RABBITMQ_EVENTS.MAIL.SEND_VERIFICATION, data);
@@ -23,7 +21,11 @@ export class MailService {
     this.client.emit(RABBITMQ_EVENTS.MAIL.SEND_WELCOME, data);
   }
 
-  async sendPasswordResetEmail(data: { to: string; resetLink?: string; otp?: string }) {
+  async sendPasswordResetEmail(data: {
+    to: string;
+    resetLink?: string;
+    otp?: string;
+  }) {
     this.client.emit(RABBITMQ_EVENTS.MAIL.SEND_PASSWORD_RESET, data);
   }
 

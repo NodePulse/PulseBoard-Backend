@@ -65,7 +65,9 @@ export class User {
   @Column({ name: 'verification_otp', length: 6, nullable: true })
   verificationOtp: string | null;
 
-  @ApiPropertyOptional({ description: 'When the verification token/OTP expires' })
+  @ApiPropertyOptional({
+    description: 'When the verification token/OTP expires',
+  })
   @Column({
     name: 'verification_expires_at',
     type: 'timestamp',
@@ -73,7 +75,10 @@ export class User {
   })
   verificationExpiresAt: Date | null;
 
-  @ApiProperty({ enum: WorkspaceRole, description: 'Role within the workspace' })
+  @ApiProperty({
+    enum: WorkspaceRole,
+    description: 'Role within the workspace',
+  })
   @Column({
     name: 'workspace_role',
     type: 'varchar',

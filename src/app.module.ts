@@ -14,7 +14,6 @@ import { SubscriptionsModule } from './modules/subscriptions/subscriptions.modul
 import { OrdersModule } from './modules/orders/orders.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { LoggerMiddleware } from './core/middleware/logger.middleware';
-import { CONSOLE_COLORS, MODULE_PREFIXES } from './core/constants/colors';
 import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
@@ -23,10 +22,12 @@ import { ThrottlerModule } from '@nestjs/throttler';
     DatabaseModule,
     RedisModule,
     SessionModule,
-    ThrottlerModule.forRoot([{
-      ttl: 900000,
-      limit: 3,
-    }]),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 900000,
+        limit: 3,
+      },
+    ]),
     UsersModule,
     TenantsModule,
     AuthModule,

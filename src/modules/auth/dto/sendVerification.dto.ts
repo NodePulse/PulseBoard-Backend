@@ -1,5 +1,16 @@
-import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
-import { VALIDATION_MESSAGES, VERIFICATION_METHODS, VERIFICATION_TYPES } from '../../../core/constants/messages';
+import {
+  IsEmail,
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
+import {
+  VALIDATION_MESSAGES,
+  VERIFICATION_METHODS,
+  VERIFICATION_TYPES,
+} from '../../../core/constants/messages';
 import { VALIDATION_LIMITS } from '../../../core/constants/limits';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -12,7 +23,10 @@ export class SendVerificationDTO {
   })
   @IsEmail({}, { message: VALIDATION_MESSAGES.EMAIL('Email') })
   @MaxLength(VALIDATION_LIMITS.EMAIL.MAX, {
-    message: VALIDATION_MESSAGES.MAX_LENGTH('Email', VALIDATION_LIMITS.EMAIL.MAX),
+    message: VALIDATION_MESSAGES.MAX_LENGTH(
+      'Email',
+      VALIDATION_LIMITS.EMAIL.MAX,
+    ),
   })
   @IsNotEmpty({ message: VALIDATION_MESSAGES.REQUIRED('Email') })
   email: string;

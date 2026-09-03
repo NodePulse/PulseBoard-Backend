@@ -1,11 +1,11 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { RedisConfig } from '../../config/config.interface';
-import { CONSOLE_COLORS, MODULE_PREFIXES } from '../constants/colors';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(RedisService.name);
   public client: Redis;
 
   constructor(private readonly configService: ConfigService) {}
@@ -16,6 +16,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       throw new Error('Redis configuration not found');
     }
 
+    const logger = this.logger;
     this.client = new Redis({
       host: config.host,
       port: config.port,
@@ -24,27 +25,25 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         ? undefined
         : { servername: config.host },
       retryStrategy(times) {
-        console.warn(
-          `${MODULE_PREFIXES.REDIS} ${CONSOLE_COLORS.YELLOW}Connection lost. Retrying connection (attempt ${times})...${CONSOLE_COLORS.RESET}`,
-        );
+        logger.warn(`Connection lost. Retrying connection (attempt ${times})...`);
         return Math.min(times * 100, 10000);
       },
     });
 
     this.client.on('connect', () => {
-      console.log(`${MODULE_PREFIXES.REDIS} ${CONSOLE_COLORS.GREEN}Client connection established.${CONSOLE_COLORS.RESET}`);
+      this.logger.log('Client connection established.');
     });
 
     this.client.on('ready', () => {
-      console.log(`${MODULE_PREFIXES.REDIS} ${CONSOLE_COLORS.GREEN}Client connection is ready.${CONSOLE_COLORS.RESET}`);
+      this.logger.log('Client connection is ready.');
     });
 
     this.client.on('error', (err) => {
-      console.error(`${MODULE_PREFIXES.REDIS} ${CONSOLE_COLORS.RED}Client error:${CONSOLE_COLORS.RESET}`, err);
+      this.logger.error('Client error:', err);
     });
 
     this.client.on('close', () => {
-      console.warn(`${MODULE_PREFIXES.REDIS} ${CONSOLE_COLORS.YELLOW}Client connection closed.${CONSOLE_COLORS.RESET}`);
+      this.logger.warn('Client connection closed.');
     });
   }
 

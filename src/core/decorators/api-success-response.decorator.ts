@@ -2,13 +2,16 @@ import { applyDecorators, Type } from '@nestjs/common';
 import { ApiExtraModels, ApiResponse, getSchemaPath } from '@nestjs/swagger';
 import { SuccessResponseDTO } from '../dto/success-response.dto';
 
-type ApiDataType = 
-  | Type<unknown> 
-  | 'string' 
-  | 'boolean' 
-  | 'number' 
-  | [Type<unknown>] 
-  | Record<string, Type<unknown> | [Type<unknown>] | 'string' | 'boolean' | 'number'>;
+type ApiDataType =
+  | Type<unknown>
+  | 'string'
+  | 'boolean'
+  | 'number'
+  | [Type<unknown>]
+  | Record<
+      string,
+      Type<unknown> | [Type<unknown>] | 'string' | 'boolean' | 'number'
+    >;
 
 export const ApiSuccessResponse = (
   typeOrDto: ApiDataType,
@@ -16,14 +19,19 @@ export const ApiSuccessResponse = (
 ) => {
   const isPrimitive = typeof typeOrDto === 'string';
   const isArray = Array.isArray(typeOrDto);
-  const isObjectMap = !isPrimitive && !isArray && typeof typeOrDto === 'object' && typeOrDto !== null && Object.getPrototypeOf(typeOrDto) === Object.prototype;
+  const isObjectMap =
+    !isPrimitive &&
+    !isArray &&
+    typeof typeOrDto === 'object' &&
+    typeOrDto !== null &&
+    Object.getPrototypeOf(typeOrDto) === Object.prototype;
 
   let dtoClass: Type<unknown> | null = null;
   const extraModels = new Set<Type<unknown>>();
   extraModels.add(SuccessResponseDTO);
 
   if (isArray) {
-    dtoClass = (typeOrDto as [Type<unknown>])[0];
+    dtoClass = typeOrDto[0];
     if (dtoClass) extraModels.add(dtoClass);
   } else if (!isPrimitive && !isObjectMap) {
     dtoClass = typeOrDto as Type<unknown>;
@@ -35,16 +43,24 @@ export const ApiSuccessResponse = (
   if (isPrimitive) {
     dataPropertySchema = { type: typeOrDto as string };
   } else if (isArray) {
-    dataPropertySchema = { type: 'array', items: { $ref: getSchemaPath(dtoClass!) } };
+    dataPropertySchema = {
+      type: 'array',
+      items: { $ref: getSchemaPath(dtoClass) },
+    };
   } else if (isObjectMap) {
     const properties: Record<string, any> = {};
-    for (const [key, value] of Object.entries(typeOrDto as Record<string, any>)) {
+    for (const [key, value] of Object.entries(
+      typeOrDto as Record<string, any>,
+    )) {
       if (typeof value === 'string') {
         properties[key] = { type: value };
       } else if (Array.isArray(value)) {
         const itemClass = value[0];
         if (itemClass) extraModels.add(itemClass);
-        properties[key] = { type: 'array', items: { $ref: getSchemaPath(itemClass) } };
+        properties[key] = {
+          type: 'array',
+          items: { $ref: getSchemaPath(itemClass) },
+        };
       } else {
         extraModels.add(value);
         properties[key] = { $ref: getSchemaPath(value) };
@@ -55,7 +71,7 @@ export const ApiSuccessResponse = (
       properties,
     };
   } else {
-    dataPropertySchema = { $ref: getSchemaPath(dtoClass!) };
+    dataPropertySchema = { $ref: getSchemaPath(dtoClass) };
   }
 
   const decoratorsToApply = [
@@ -67,8 +83,12 @@ export const ApiSuccessResponse = (
           { $ref: getSchemaPath(SuccessResponseDTO) },
           {
             properties: {
-              ...(options.message ? { message: { type: 'string', example: options.message } } : {}),
-              ...(options.status ? { statusCode: { type: 'number', example: options.status } } : {}),
+              ...(options.message
+                ? { message: { type: 'string', example: options.message } }
+                : {}),
+              ...(options.status
+                ? { statusCode: { type: 'number', example: options.status } }
+                : {}),
               data: dataPropertySchema,
             },
           },

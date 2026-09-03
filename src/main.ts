@@ -53,7 +53,7 @@ async function bootstrap() {
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
     options: {
-      urls: [configService.get('rabbitmq.url', { infer: true }) as string],
+      urls: [configService.get<string>('rabbitmq.url', { infer: true })],
       queue: 'mail_queue',
       queueOptions: {
         durable: true,

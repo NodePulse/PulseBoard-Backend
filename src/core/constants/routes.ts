@@ -10,6 +10,7 @@ export const API_ROUTES = {
     SEND_VERIFICATION: 'send-verification',
     ME: 'me',
     CSRF_TOKEN: 'csrf-token',
+    RESET_PASSWORD: 'reset-password',
   },
   TENANTS: {
     ROOT: 'tenants',

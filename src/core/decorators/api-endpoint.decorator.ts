@@ -39,16 +39,20 @@ export function ApiEndpoint(responses: EndpointResponses) {
     const isSuccess = status >= 200 && status < 300;
 
     if (isSuccess) {
-      const successConfig = typeof config === 'string' ? { description: config } : (config as SuccessEndpointConfig);
+      const successConfig =
+        typeof config === 'string' ? { description: config } : config;
       decorators.push(
         ApiSuccessResponse(successConfig.type || 'string', {
           status,
           message: successConfig.message,
           description: successConfig.description,
-        })
+        }),
       );
     } else {
-      const description = typeof config === 'string' ? config : (config as ErrorEndpointConfig).description;
+      const description =
+        typeof config === 'string'
+          ? config
+          : (config as ErrorEndpointConfig).description;
       decorators.push(
         ApiResponse({
           status,
@@ -60,16 +64,18 @@ export function ApiEndpoint(responses: EndpointResponses) {
                 properties: {
                   statusCode: { type: 'number', example: status },
                   message: { type: 'string', example: description },
-                  error: { type: 'string', example: getErrorStatusText(status) },
+                  error: {
+                    type: 'string',
+                    example: getErrorStatusText(status),
+                  },
                 },
               },
             ],
           },
-        })
+        }),
       );
     }
   }
 
   return applyDecorators(...decorators);
 }
-

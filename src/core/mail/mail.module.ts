@@ -13,7 +13,7 @@ import { MailController } from './mail.controller';
         useFactory: (configService: ConfigService) => ({
           transport: Transport.RMQ,
           options: {
-            urls: [configService.get<string>('rabbitmq.url')!],
+            urls: [configService.get<string>('rabbitmq.url')],
             queue: 'mail_queue',
             queueOptions: {
               durable: true,

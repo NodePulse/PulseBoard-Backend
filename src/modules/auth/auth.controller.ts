@@ -3,7 +3,6 @@ import {
   Post,
   Body,
   Get,
-  Query,
   UseGuards,
   Req,
   Res,
@@ -17,18 +16,18 @@ import { RegisterUserDTO } from './dto/registerUser.dto';
 import { LoginUserDTO } from './dto/loginUser.dto';
 import { SendVerificationDTO } from './dto/sendVerification.dto';
 import { VerifyDTO } from './dto/verify.dto';
+import { UpdatePasswordDTO } from './dto/updatePassword.dto';
 import { API_ROUTES } from '../../core/constants/routes';
 import { ResponseMessage } from '../../core/decorators/response-message.decorator';
 import { RESPONSE_MESSAGES } from '../../core/constants/messages';
 import { SessionGuard } from '../../core/guards/session.guard';
 import { CurrentUser } from '../../core/decorators/current-user.decorator';
 import type { Request, Response } from 'express';
-import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { User } from '../users/entities/user.entity';
 import {
   Throttle,
   ThrottlerGuard,
-  ThrottlerException,
   ThrottlerLimitDetail,
 } from '@nestjs/throttler';
 import {
@@ -88,10 +87,8 @@ export class AuthController {
     409: RESPONSE_MESSAGES.CONFLICT_EMAIL,
   })
   @Post(API_ROUTES.AUTH.REGISTER)
-  @ResponseMessage(RESPONSE_MESSAGES.USER_REGISTERED)
   public async register(@Body() dto: RegisterUserDTO) {
-    const user = await this.authService.registerUser(dto);
-    return { user };
+    return this.authService.registerUser(dto);
   }
 
   // CONTROLLER
@@ -155,6 +152,7 @@ export class AuthController {
   @Post(API_ROUTES.AUTH.LOGOUT)
   @UseGuards(SessionGuard)
   @HttpCode(200)
+  @ResponseMessage(RESPONSE_MESSAGES.LOGOUT_SUCCESS)
   public async logout(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
@@ -165,7 +163,7 @@ export class AuthController {
     }
 
     res.clearCookie(SESSION_COOKIE_NAME, { path: '/' });
-    return true;
+    return { loggedOut: true };
   }
 
   // CONTROLLER
@@ -183,8 +181,10 @@ export class AuthController {
   })
   @Get(API_ROUTES.AUTH.ME)
   @UseGuards(SessionGuard)
+  @ResponseMessage('Session retrieved successfully')
   public async getMe(@CurrentUser() user: SessionPayload) {
-    return this.authService.getMe(user.sub);
+    const userProfile = await this.authService.getMe(user.sub);
+    return { user: userProfile };
   }
 
   // CONTROLLER
@@ -250,6 +250,44 @@ export class AuthController {
   // CONTROLLER
   @ApiTags('Authentication')
   @ApiOperation({
+    summary: 'Update / Reset Password',
+    description:
+      'Unified password management endpoint. Supports two scenarios:\n' +
+      '1. Forgot Password Reset (Unauthenticated): Provide { email, code, newPassword }\n' +
+      '2. In-App Password Change (Authenticated): Provide { currentPassword, newPassword }',
+  })
+  @ApiBody({ type: UpdatePasswordDTO })
+  @ApiEndpoint({
+    200: {
+      type: { message: String },
+      message: 'Password updated successfully',
+    },
+    400: RESPONSE_MESSAGES.AUTH.VALIDATION_ERROR,
+    401: RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN,
+  })
+  @Post(API_ROUTES.AUTH.RESET_PASSWORD)
+  @UseGuards(ForgotPasswordThrottlerGuard)
+  @Throttle({ default: { limit: 3, ttl: 900000 } })
+  public async resetPassword(
+    @Body() dto: UpdatePasswordDTO,
+    @Req() req: Request,
+  ) {
+    const sessionId = req.cookies?.[SESSION_COOKIE_NAME];
+    let currentUserSub: string | undefined = undefined;
+
+    if (sessionId) {
+      const session = await this.authService.getSessionById(sessionId);
+      if (session && session.status === 'ACTIVE') {
+        currentUserSub = session.userId;
+      }
+    }
+
+    return this.authService.resetPassword(dto, currentUserSub);
+  }
+
+  // CONTROLLER
+  @ApiTags('Authentication')
+  @ApiOperation({
     summary: 'Get active sessions',
     description: 'Get active sessions',
   })
@@ -290,6 +328,4 @@ export class AuthController {
     await this.authService.revokeSession(user.sub, id);
     return true;
   }
-
-
 }

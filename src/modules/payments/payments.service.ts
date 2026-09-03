@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Payment, PaymentStatus } from './entities/payment.entity';
+import { PaymentStatus } from './entities/payment.entity';
 import { CreatePaymentOrderDto } from './dto/createPaymentOrder.dto';
 import { RESPONSE_MESSAGES } from 'src/core/constants/messages';
 import { RazorpayService } from './razorpay.service';
@@ -96,7 +96,7 @@ export class PaymentsService {
   }
 
   public async completePaymentOrder(dto: CompletePaymentOrderDto) {
-    const { orderId, paymentId, method, razorpaySignature, status } = dto;
+    const { orderId, paymentId, method, razorpaySignature: _, status } = dto;
 
     const order = await this.ordersService.findByRazorpayOrderId(orderId);
     if (!order) {

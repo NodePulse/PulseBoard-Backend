@@ -61,7 +61,7 @@ export class SessionCacheService {
     if (cached) {
       try {
         return JSON.parse(cached) as CachedSession;
-      } catch (err) {
+      } catch {
         // Fallback on JSON parse error
       }
     }

@@ -21,12 +21,12 @@ export class LoggerMiddleware implements NestMiddleware {
 
       let message = '';
       const body = res.locals.body as unknown;
-      
+
       if (body) {
         try {
           const parsedBody: unknown =
             typeof body === 'string' ? JSON.parse(body) : body;
-            
+
           if (
             typeof parsedBody === 'object' &&
             parsedBody !== null &&
@@ -34,7 +34,7 @@ export class LoggerMiddleware implements NestMiddleware {
           ) {
             message = String((parsedBody as Record<string, unknown>).message);
           }
-        } catch (e) {
+        } catch {
           // Ignore JSON parse errors
         }
       }

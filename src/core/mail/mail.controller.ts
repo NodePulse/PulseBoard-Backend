@@ -58,16 +58,15 @@ export class MailController {
   }
 
   @EventPattern(RABBITMQ_EVENTS.MAIL.SEND_PASSWORD_RESET)
-  async handleSendPasswordReset(
-    @Payload() data: { to: string; otp: string },
-  ) {
+  async handleSendPasswordReset(@Payload() data: { to: string; otp: string }) {
     const html = getPasswordResetTemplate(data.otp);
     await this.sendEmail(data.to, 'Reset your PulseBoard Password', html);
   }
 
   @EventPattern(RABBITMQ_EVENTS.MAIL.SEND_TEAM_INVITE)
   async handleSendTeamInvite(
-    @Payload() data: {
+    @Payload()
+    data: {
       to: string;
       inviterName: string;
       teamName: string;
