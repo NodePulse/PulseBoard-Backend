@@ -6,6 +6,7 @@ import { UsersModule } from '../users/users.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SessionModule } from '../session/session.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { SessionModule } from '../session/session.module';
     UsersModule,
     SubscriptionsModule,
     SessionModule,
+    NotificationsModule,
   ],
   controllers: [TenantsController],
   providers: [TenantsService],

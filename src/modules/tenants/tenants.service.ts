@@ -16,6 +16,8 @@ import { RESPONSE_MESSAGES } from '../../core/constants/messages';
 import { TENANT_CONSTANTS } from '../../core/constants/tenants';
 import { UserRepository } from '../users/repositories/user.repository';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType, NotificationChannel } from '../notifications/entities/notification-type.enum';
 
 @Injectable()
 export class TenantsService {
@@ -24,6 +26,7 @@ export class TenantsService {
     private readonly tenantRepository: Repository<Tenant>,
     private readonly userRepository: UserRepository,
     private readonly subscriptionsService: SubscriptionsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   public async createTenant(
@@ -82,6 +85,14 @@ export class TenantsService {
       user.tenantId = savedTenant.id;
       user.workspaceRole = WorkspaceRole.OWNER;
       await this.userRepository.save(user);
+
+      await this.notificationsService.createNotification({
+        recipientId: userId,
+        type: NotificationType.PROJECT_UPDATE,
+        channel: NotificationChannel.IN_APP,
+        title: 'Workspace Created',
+        body: `You have successfully created the workspace '${savedTenant.name}'.`,
+      });
 
       return savedTenant;
     } catch (error) {

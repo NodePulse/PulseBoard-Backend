@@ -13,6 +13,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { LoggerMiddleware } from './core/middleware/logger.middleware';
 import { ThrottlerModule } from '@nestjs/throttler';
 
@@ -35,6 +36,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     SubscriptionsModule,
     OrdersModule,
     TransactionsModule,
+    NotificationsModule,
   ],
   controllers: [],
   providers: [],

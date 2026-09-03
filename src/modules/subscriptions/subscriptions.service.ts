@@ -6,12 +6,15 @@ import {
   SubscriptionPlan,
   SubscriptionStatus,
 } from './entities/subscription.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType, NotificationChannel } from '../notifications/entities/notification-type.enum';
 
 @Injectable()
 export class SubscriptionsService {
   constructor(
     @InjectRepository(Subscription)
     private readonly subscriptionRepository: Repository<Subscription>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   public async activateSubscription(
@@ -37,7 +40,17 @@ export class SubscriptionsService {
       currentPeriodEnd,
     });
 
-    return this.subscriptionRepository.save(subscription);
+    const savedSubscription = await this.subscriptionRepository.save(subscription);
+
+    await this.notificationsService.createNotification({
+      recipientId: userId,
+      type: NotificationType.ACCOUNT_UPDATE,
+      channel: NotificationChannel.IN_APP,
+      title: 'Subscription Activated',
+      body: `Your subscription to the ${plan} plan is now active.`,
+    });
+
+    return savedSubscription;
   }
 
   public async getActiveSubscription(

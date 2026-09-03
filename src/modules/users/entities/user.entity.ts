@@ -30,6 +30,7 @@ export class User {
   @Column({ name: 'tenant_id', nullable: true })
   tenantId: string | null;
 
+  @ApiProperty()
   @ManyToOne(() => Tenant, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'tenant_id' })
   tenant: Tenant | null;
@@ -39,6 +40,7 @@ export class User {
   @Index()
   email: string;
 
+  @ApiProperty()
   @Column({ name: 'password_hash', length: 255, nullable: true, select: false })
   passwordHash: string | null;
 
@@ -58,16 +60,19 @@ export class User {
   @Column({ name: 'is_email_verified', default: false })
   isEmailVerified: boolean;
 
+  @ApiProperty()
   @Column({ name: 'verification_token', length: 255, nullable: true })
   @Index({ unique: true, where: 'verification_token IS NOT NULL' })
   verificationToken: string | null;
 
+  @ApiProperty()
   @Column({ name: 'verification_otp', length: 6, nullable: true })
   verificationOtp: string | null;
 
   @ApiPropertyOptional({
     description: 'When the verification token/OTP expires',
   })
+  @ApiProperty()
   @Column({
     name: 'verification_expires_at',
     type: 'timestamp',
@@ -79,6 +84,7 @@ export class User {
     enum: WorkspaceRole,
     description: 'Role within the workspace',
   })
+  @ApiProperty()
   @Column({
     name: 'workspace_role',
     type: 'varchar',

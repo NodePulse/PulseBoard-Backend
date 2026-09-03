@@ -30,11 +30,17 @@ import { randomUUID, randomInt } from 'crypto';
 import { RedisService } from 'src/core/redis/redis.service';
 import { MailService } from 'src/core/mail/mail.service';
 import { SessionCacheService } from '../session/session-cache.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+import { Subscription } from '../subscriptions/entities/subscription.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType, NotificationChannel } from '../notifications/entities/notification-type.enum';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly userRepository: UserRepository,
+    private readonly subscriptionsService: SubscriptionsService,
+    private readonly notificationsService: NotificationsService,
     @InjectRepository(Session)
     private readonly sessionRepository: Repository<Session>,
     private readonly configService: ConfigService,
@@ -169,7 +175,7 @@ export class AuthService {
   }> {
     const { email, password } = dto;
 
-    const user = await this.userRepository.findByEmailWithPassword(email, null);
+    const user = await this.userRepository.findByEmailWithPassword(email);
     if (!user) {
       throw new UnauthorizedException(
         RESPONSE_MESSAGES.AUTH.INVALID_CREDENTIALS,
@@ -303,7 +309,8 @@ export class AuthService {
     // Defense against email enumeration: return generic success without revealing non-existent email
     if (!user) {
       return {
-        message: 'If an account exists with this email, a verification message has been sent.',
+        message:
+          'If an account exists with this email, a verification message has been sent.',
         email,
         type,
         method: method || VERIFICATION_METHODS.OTP,
@@ -447,6 +454,14 @@ export class AuthService {
         await this.userRepository.save(user);
         await this.mailService.cleanCompletedJobs();
 
+        await this.notificationsService.createNotification({
+          recipientId: user.id,
+          type: NotificationType.SYSTEM,
+          channel: NotificationChannel.IN_APP,
+          title: 'Welcome to PulseBoard!',
+          body: 'Your account has been successfully verified. Let’s get started!',
+        });
+
         return {
           message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS,
           email: user.email,
@@ -502,6 +517,14 @@ export class AuthService {
         await this.userRepository.save(user);
         await this.redisService.del(REDIS_KEYS.OTP(email));
         await this.redisService.del(attemptsKey);
+
+        await this.notificationsService.createNotification({
+          recipientId: user.id,
+          type: NotificationType.SYSTEM,
+          channel: NotificationChannel.IN_APP,
+          title: 'Welcome to PulseBoard!',
+          body: 'Your account has been successfully verified. Let’s get started!',
+        });
 
         return {
           message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS,
@@ -622,13 +645,18 @@ export class AuthService {
   }
 
   // SERVICE — Session bootstrap (GET /auth/me)
-  public async getMe(userId: string): Promise<Omit<User, 'passwordHash'>> {
+  public async getMe(
+    userId: string,
+  ): Promise<Omit<User, 'passwordHash'> & { subscription: Subscription | null }> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new UnauthorizedException(RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN);
     }
+
+    const planInfo =
+      await this.subscriptionsService.getActiveSubscription(userId);
     const { passwordHash: _, ...userResponse } = user;
-    return userResponse;
+    return { ...userResponse, subscription: planInfo };
   }
 
   // SERVICE — CSRF token generation
@@ -668,7 +696,8 @@ export class AuthService {
         throw new BadRequestException('Current password is required');
       }
 
-      const user = await this.userRepository.findByIdWithPassword(currentUserSub);
+      const user =
+        await this.userRepository.findByIdWithPassword(currentUserSub);
       if (!user) {
         throw new NotFoundException(RESPONSE_MESSAGES.USER_NOT_FOUND);
       }
@@ -764,7 +793,8 @@ export class AuthService {
       await this.logoutAll(user.id);
 
       return {
-        message: 'Password reset successfully. Please log in with your new password.',
+        message:
+          'Password reset successfully. Please log in with your new password.',
         updatedAt,
       };
     }

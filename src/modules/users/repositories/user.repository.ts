@@ -18,12 +18,12 @@ export class UserRepository extends Repository<User> {
 
   public async findByEmailWithPassword(
     email: string,
-    tenantId: string | null = null,
+    // tenantId: string | null = null,
   ): Promise<User | null> {
     return this.findOne({
       where: {
         email,
-        tenantId: tenantId === null ? IsNull() : tenantId,
+        // tenantId: tenantId === null ? IsNull() : tenantId,
       },
       select: {
         id: true,
