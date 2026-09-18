@@ -8,11 +8,12 @@ export const VALIDATION_LIMITS = {
     MAX: 20,
   },
   EMAIL: {
+    MIN: 8,
     MAX: 50,
   },
   PASSWORD: {
-    MIN: 6,
-    MAX: 50,
+    MIN: 8,
+    MAX: 32,
   },
   TENANT_NAME: {
     MAX: 255,

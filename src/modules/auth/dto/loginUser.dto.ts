@@ -17,6 +17,12 @@ export class LoginUserDTO {
     required: true,
   })
   @IsEmail({}, { message: VALIDATION_MESSAGES.EMAIL('Email') })
+  @MinLength(VALIDATION_LIMITS.EMAIL.MIN, {
+    message: VALIDATION_MESSAGES.MIN_LENGTH(
+      'Email',
+      VALIDATION_LIMITS.EMAIL.MIN,
+    ),
+  })
   @MaxLength(VALIDATION_LIMITS.EMAIL.MAX, {
     message: VALIDATION_MESSAGES.MAX_LENGTH(
       'Email',
