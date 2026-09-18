@@ -5,6 +5,7 @@ import { NotificationPreference } from './entities/notification-preference.entit
 import { DeviceToken } from './entities/device-token.entity';
 import { NotificationsService } from './notifications.service';
 import { NotificationsController } from './notifications.controller';
+import { NotificationsGateway } from './notifications.gateway';
 import { SessionModule } from '../session/session.module';
 
 @Module({
@@ -17,7 +18,7 @@ import { SessionModule } from '../session/session.module';
     SessionModule,
   ],
   controllers: [NotificationsController],
-  providers: [NotificationsService],
-  exports: [NotificationsService],
+  providers: [NotificationsService, NotificationsGateway],
+  exports: [NotificationsService, NotificationsGateway],
 })
 export class NotificationsModule {}

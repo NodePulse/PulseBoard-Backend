@@ -20,4 +20,9 @@ export const API_ROUTES = {
   USERS: {
     ROOT: 'users',
   },
+  NOTIFICATIONS: {
+    ROOT: 'notifications',
+    MARK_READ: ':id/read',
+    PREFERENCES: 'preferences',
+  },
 };

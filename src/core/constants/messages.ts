@@ -40,6 +40,12 @@ export const RESPONSE_MESSAGES = {
     USER_ALREADY_HAVE_TENANT: 'You already have a organization.',
     TENANT_NOT_FOUND: '',
   },
+  NOTIFICATIONS: {
+    LIST_SUCCESS: 'Notifications retrieved successfully',
+    MARK_READ_SUCCESS: 'Notification marked as read successfully',
+    PREFERENCES_SUCCESS: 'Notification preferences retrieved successfully',
+    UPDATE_PREFERENCE_SUCCESS: 'Notification preference updated successfully',
+  },
 };
 
 export const VALIDATION_MESSAGES = {

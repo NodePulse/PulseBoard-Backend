@@ -3,14 +3,20 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from './entities/notification.entity';
 import { NotificationPreference } from './entities/notification-preference.entity';
-import { NotificationStatus, NotificationType, NotificationChannel } from './entities/notification-type.enum';
+import {
+  NotificationStatus,
+  NotificationType,
+  NotificationChannel,
+} from './entities/notification-type.enum';
 import { UpdatePreferenceDto } from './dto/update-preference.dto';
+import { NotificationsGateway } from './notifications.gateway';
 
 @Injectable()
 export class NotificationsService {
   constructor(
     @InjectRepository(Notification)
     private readonly notificationRepository: Repository<Notification>,
+    private readonly notificationGateway: NotificationsGateway,
     @InjectRepository(NotificationPreference)
     private readonly preferenceRepository: Repository<NotificationPreference>,
   ) {}
@@ -22,7 +28,10 @@ export class NotificationsService {
     });
   }
 
-  public async markAsRead(userId: string, notificationId: string): Promise<Notification> {
+  public async markAsRead(
+    userId: string,
+    notificationId: string,
+  ): Promise<Notification> {
     const notification = await this.notificationRepository.findOne({
       where: { id: notificationId, recipientId: userId },
     });
@@ -36,13 +45,18 @@ export class NotificationsService {
     return this.notificationRepository.save(notification);
   }
 
-  public async getPreferences(userId: string): Promise<NotificationPreference[]> {
+  public async getPreferences(
+    userId: string,
+  ): Promise<NotificationPreference[]> {
     return this.preferenceRepository.find({
       where: { userId },
     });
   }
 
-  public async updatePreference(userId: string, dto: UpdatePreferenceDto): Promise<NotificationPreference> {
+  public async updatePreference(
+    userId: string,
+    dto: UpdatePreferenceDto,
+  ): Promise<NotificationPreference> {
     let preference = await this.preferenceRepository.findOne({
       where: { userId, type: dto.type, channel: dto.channel },
     });
@@ -67,8 +81,38 @@ export class NotificationsService {
     channel: NotificationChannel;
     title: string;
     body: string;
-  }): Promise<Notification> {
+    metadata?: Record<string, unknown>;
+  }): Promise<Notification | null> {
+    // 1. Check user notification preference
+    const preference = await this.preferenceRepository.findOne({
+      where: {
+        userId: data.recipientId,
+        type: data.type,
+        channel: data.channel,
+      },
+    });
+
+    // If explicit preference exists and is disabled, skip notification
+    if (preference && !preference.enabled) {
+      return null;
+    }
+
+    // 2. Persist notification in database
     const notification = this.notificationRepository.create(data);
-    return this.notificationRepository.save(notification);
+    const savedNotification = await this.notificationRepository.save(
+      notification,
+    );
+
+    // 3. Push real-time notification to user's WebSocket room
+    try {
+      await this.notificationGateway.sendNotificationToUser(
+        savedNotification.recipientId,
+        savedNotification,
+      );
+    } catch (error) {
+      // Log socket emission error without interrupting flow
+    }
+
+    return savedNotification;
   }
 }

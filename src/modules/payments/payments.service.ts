@@ -137,6 +137,8 @@ export class PaymentsService {
           order.plan as SubscriptionPlan,
         );
       }
+    } else if (status === PaymentStatus.FAILED) {
+      await this.ordersService.updateStatus(order.id, OrderStatus.FAILED);
     }
 
     return payment;
