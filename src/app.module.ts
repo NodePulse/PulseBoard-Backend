@@ -5,17 +5,16 @@ import { UsersModule } from './modules/users/users.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { RedisModule } from './core/redis/redis.module';
-
-import { ConfigService } from '@nestjs/config';
-
 import { SessionModule } from './modules/session/session.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
-import { LoggerMiddleware } from './core/middleware/logger.middleware';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { LoggerMiddleware } from './core/middleware/logger.middleware';
 
 @Module({
   imports: [
@@ -38,8 +37,8 @@ import { ThrottlerModule } from '@nestjs/throttler';
     TransactionsModule,
     NotificationsModule,
   ],
-  controllers: [],
-  providers: [],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

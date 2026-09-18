@@ -20,6 +20,9 @@ export const API_ROUTES = {
   USERS: {
     ROOT: 'users',
   },
+  HEALTH: {
+    ROOT: 'health',
+  },
   NOTIFICATIONS: {
     ROOT: 'notifications',
     MARK_READ: ':id/read',

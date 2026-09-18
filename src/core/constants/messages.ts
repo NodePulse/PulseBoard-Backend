@@ -46,6 +46,9 @@ export const RESPONSE_MESSAGES = {
     PREFERENCES_SUCCESS: 'Notification preferences retrieved successfully',
     UPDATE_PREFERENCE_SUCCESS: 'Notification preference updated successfully',
   },
+  HEALTH: {
+    SUCCESS: 'Health status retrieved successfully',
+  },
 };
 
 export const VALIDATION_MESSAGES = {
