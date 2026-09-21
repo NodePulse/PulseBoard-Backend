@@ -66,11 +66,11 @@ export const VALIDATION_MESSAGES = {
 };
 
 export const VERIFICATION_METHODS = {
-  MAGIC: 'magic',
-  OTP: 'otp',
+  MAGIC: 'MAGIC',
+  OTP: 'OTP',
 };
 
 export const VERIFICATION_TYPES = {
-  SIGNUP: 'signup',
-  FORGOT_PASSWORD: 'forgot_password',
+  SIGNUP: 'SIGNUP',
+  FORGOT_PASSWORD: 'FORGOT_PASSWORD',
 };

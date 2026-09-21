@@ -11,6 +11,7 @@ import { SubscriptionsModule } from './modules/subscriptions/subscriptions.modul
 import { OrdersModule } from './modules/orders/orders.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { MailModule } from './core/mail/mail.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -22,6 +23,7 @@ import { LoggerMiddleware } from './core/middleware/logger.middleware';
     DatabaseModule,
     RedisModule,
     SessionModule,
+    MailModule,
     ThrottlerModule.forRoot([
       {
         ttl: 900000,

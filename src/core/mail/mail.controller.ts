@@ -17,16 +17,26 @@ export class MailController {
   private fromEmail: string;
 
   constructor(private readonly configService: ConfigService) {
+    const host = this.configService.get<string>('mail.host');
+    const port = this.configService.get<number>('mail.port') || 587;
+    const user = this.configService.get<string>('mail.user');
+    const pass = this.configService.get<string>('mail.pass');
+
     this.transporter = nodemailer.createTransport({
-      host: this.configService.get<string>('mail.host'),
-      port: this.configService.get<number>('mail.port'),
+      host,
+      port,
+      secure: port === 465,
       auth: {
-        user: this.configService.get<string>('mail.user'),
-        pass: this.configService.get<string>('mail.pass'),
+        user,
+        pass,
+      },
+      tls: {
+        rejectUnauthorized: false,
       },
     });
     this.fromEmail =
       this.configService.get<string>('mail.fromEmail') ||
+      user ||
       'noreply@pulseboard.com';
   }
 
@@ -47,6 +57,7 @@ export class MailController {
 
   @EventPattern(RABBITMQ_EVENTS.MAIL.SEND_VERIFICATION)
   async handleSendVerification(@Payload() data: VerificationMailJob) {
+    console.log('Sending verification email to', data.to);
     const html = getVerificationTemplate(data.magicLink, data.otp);
     await this.sendEmail(data.to, 'Verify your PulseBoard Account', html);
   }

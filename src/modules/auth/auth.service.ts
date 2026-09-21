@@ -33,7 +33,10 @@ import { SessionCacheService } from '../session/session-cache.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { Subscription } from '../subscriptions/entities/subscription.entity';
 import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationType, NotificationChannel } from '../notifications/entities/notification-type.enum';
+import {
+  NotificationType,
+  NotificationChannel,
+} from '../notifications/entities/notification-type.enum';
 
 @Injectable()
 export class AuthService {
@@ -198,27 +201,27 @@ export class AuthService {
     }
 
     if (!user.isEmailVerified) {
-      const isExpired = user.verificationExpiresAt
-        ? new Date() > user.verificationExpiresAt
-        : true;
-      const resendPath = `/api/${API_ROUTES.AUTH.ROOT}/${API_ROUTES.AUTH.SEND_VERIFICATION}`;
+      // const isExpired = user.verificationExpiresAt
+      //   ? new Date() > user.verificationExpiresAt
+      //   : true;
+      // const resendPath = `/api/${API_ROUTES.AUTH.ROOT}/${API_ROUTES.AUTH.SEND_VERIFICATION}`;
       throw new UnauthorizedException({
         message: RESPONSE_MESSAGES.EMAIL_NOT_VERIFIED,
-        data: {
-          isExpired,
-          options: [
-            {
-              method: VERIFICATION_METHODS.MAGIC,
-              path: resendPath,
-              body: { email: user.email, method: VERIFICATION_METHODS.MAGIC },
-            },
-            {
-              method: VERIFICATION_METHODS.OTP,
-              path: resendPath,
-              body: { email: user.email, method: VERIFICATION_METHODS.OTP },
-            },
-          ],
-        },
+        // data: {
+        //   isExpired,
+        //   options: [
+        //     {
+        //       method: VERIFICATION_METHODS.MAGIC,
+        //       path: resendPath,
+        //       body: { email: user.email, method: VERIFICATION_METHODS.MAGIC },
+        //     },
+        //     {
+        //       method: VERIFICATION_METHODS.OTP,
+        //       path: resendPath,
+        //       body: { email: user.email, method: VERIFICATION_METHODS.OTP },
+        //     },
+        //   ],
+        // },
       });
     }
 
@@ -647,7 +650,9 @@ export class AuthService {
   // SERVICE — Session bootstrap (GET /auth/me)
   public async getMe(
     userId: string,
-  ): Promise<Omit<User, 'passwordHash'> & { subscription: Subscription | null }> {
+  ): Promise<
+    Omit<User, 'passwordHash'> & { subscription: Subscription | null }
+  > {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new UnauthorizedException(RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN);
