@@ -21,4 +21,7 @@ export const VALIDATION_LIMITS = {
   TENANT_SLUG: {
     MAX: 100,
   },
+  MFA_SECRET: {
+    LENGTH: 16,
+  },
 };

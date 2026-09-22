@@ -19,6 +19,8 @@ export const API_ROUTES = {
   },
   USERS: {
     ROOT: 'users',
+    CHANGE_PASSWORD: 'change-password',
+    ADD_MFA: 'add-mfa',
   },
   HEALTH: {
     ROOT: 'health',
@@ -27,5 +29,14 @@ export const API_ROUTES = {
     ROOT: 'notifications',
     MARK_READ: ':id/read',
     PREFERENCES: 'preferences',
+  },
+  PAYMENTS: {
+    ROOT: 'payments',
+    CREATE_PAYMENT_ORDER: 'create-payment-order',
+    COMPLETE_PAYMENT_ORDER: 'complete-payment-order',
+  },
+  SUBSCRIPTIONS: {
+    ROOT: 'subscriptions',
+    ACTIVE: 'active',
   },
 };

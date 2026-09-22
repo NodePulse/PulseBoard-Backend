@@ -21,6 +21,12 @@ export class CreateTenantDTO {
   @IsNotEmpty({ message: VALIDATION_MESSAGES.REQUIRED('Tenant name') })
   name: string;
 
+  @ApiProperty({
+    description: 'Slug of the tenant',
+    example: 'my-tenant-slug',
+    type: 'string',
+    required: true,
+  })
   @IsString({ message: VALIDATION_MESSAGES.MUST_BE_STRING('Tenant slug') })
   @MaxLength(VALIDATION_LIMITS.TENANT_SLUG.MAX, {
     message: VALIDATION_MESSAGES.MAX_LENGTH(

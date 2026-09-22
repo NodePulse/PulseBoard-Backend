@@ -96,6 +96,14 @@ export class User {
   @Column({ nullable: true, default: true })
   isActive: boolean;
 
+  @ApiProperty({ description: 'Is user enabled mfa' })
+  @Column({ nullable: true, default: false })
+  isMfaEnabled: boolean;
+
+  @ApiProperty({ description: 'MFA secret key' })
+  @Column({ nullable: true, default: null })
+  mfaSecret: string;
+
   @ApiProperty({ description: 'Creation date' })
   @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   createdAt: Date;

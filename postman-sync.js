@@ -115,7 +115,7 @@ async function syncOnce() {
     lastSwaggerHash = currentHash;
     console.log(`[${new Date().toLocaleTimeString()}] Postman collection updated successfully.`);
   } catch (err) {
-    console.error(`[${new Date().toLocaleTimeString()}] Sync failed:`, err.message);
+    console.error(`[${new Date().toLocaleTimeString()}] Sync failed:`, err.stack || err);
     console.error('Is your NestJS app running and reachable at', SWAGGER_JSON_URL, '?');
   }
 }

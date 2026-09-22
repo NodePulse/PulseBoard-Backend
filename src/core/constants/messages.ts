@@ -34,11 +34,21 @@ export const RESPONSE_MESSAGES = {
     PLAN_INACTIVE: 'This subscription plan is currently unavailable',
     INVALID_AMOUNT: 'Invalid subscription plan amount',
     ORDER_NOT_FOUND: 'We couldn’t find your payment order. Please try again.',
+    CREATE_ORDER_SUCCESS: 'Payment order created successfully',
+    COMPLETE_ORDER_SUCCESS: 'Payment order completed successfully',
   },
   TENANT: {
     TENANT_SLUG_CONFLICT: 'Tenant slug is already taken',
     USER_ALREADY_HAVE_TENANT: 'You already have a organization.',
     TENANT_NOT_FOUND: '',
+    GET_SUCCESS: 'Organization retrieved successfully',
+  },
+  USERS: {
+    CHANGE_PASSWORD_SUCCESS: 'Password changed successfully',
+    MFA_SETUP_SUCCESS: 'MFA setup successfully',
+  },
+  SUBSCRIPTIONS: {
+    GET_ACTIVE_SUCCESS: 'Active subscription retrieved successfully',
   },
   NOTIFICATIONS: {
     LIST_SUCCESS: 'Notifications retrieved successfully',

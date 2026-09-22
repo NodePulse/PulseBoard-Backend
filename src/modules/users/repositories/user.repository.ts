@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, Repository, IsNull } from 'typeorm';
+import { DataSource, Repository, IsNull, UpdateResult } from 'typeorm';
 import { User } from '../entities/user.entity';
 
 @Injectable()
@@ -14,6 +14,22 @@ export class UserRepository extends Repository<User> {
         email,
       },
     });
+  }
+
+  public async findUserById(id: string): Promise<User | null> {
+    return this.findOne({
+      where: {
+        id,
+      },
+    });
+  }
+
+  public async findUserByIdAndUpdatePassword(
+    id: string,
+    passwordHash: string,
+  ): Promise<UpdateResult> {
+    const updatedUser = await this.update({ id }, { passwordHash });
+    return updatedUser;
   }
 
   public async findByEmailWithPassword(
