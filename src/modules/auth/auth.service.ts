@@ -23,7 +23,6 @@ import {
   VERIFICATION_TYPES,
 } from '../../core/constants/messages';
 import { REDIS_KEYS } from '../../core/constants/redis';
-import { API_ROUTES } from '../../core/constants/routes';
 import { UserRepository } from '../users/repositories/user.repository';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID, randomInt } from 'crypto';
@@ -572,7 +571,9 @@ export class AuthService {
         try {
           const parsed = JSON.parse(storedHashedOtp);
           hashedOtp = parsed.hashedOtp;
-        } catch {}
+        } catch {
+          // ignore parsing error
+        }
       }
 
       const isValid = await bcrypt.compare(code, hashedOtp);
@@ -772,7 +773,9 @@ export class AuthService {
         try {
           const parsed = JSON.parse(storedHashedOtp);
           hashedOtp = parsed.hashedOtp;
-        } catch {}
+        } catch {
+          // ignore parsing error
+        }
       }
 
       const isValid = await bcrypt.compare(code, hashedOtp);

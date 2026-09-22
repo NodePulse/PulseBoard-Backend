@@ -32,7 +32,8 @@ export class LoggerMiddleware implements NestMiddleware {
             parsedBody !== null &&
             'message' in parsedBody
           ) {
-            message = String((parsedBody as Record<string, unknown>).message);
+            const msg = (parsedBody as Record<string, unknown>).message;
+            message = typeof msg === 'string' ? msg : JSON.stringify(msg);
           }
         } catch {
           // Ignore JSON parse errors

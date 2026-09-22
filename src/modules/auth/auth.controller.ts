@@ -67,12 +67,13 @@ export interface SessionPayload {
   sid: string;
 }
 
+@ApiTags('Authentication')
 @Controller(API_ROUTES.AUTH.ROOT)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   // CONTROLLER
-  @ApiTags('Authentication')
+
   @ApiOperation({
     summary: 'Register a new user',
     description: 'Registers a new user with the provided details',
@@ -92,7 +93,7 @@ export class AuthController {
   }
 
   // CONTROLLER
-  @ApiTags('Authentication')
+
   @ApiOperation({
     summary: 'Login with email and password',
     description:
@@ -137,7 +138,7 @@ export class AuthController {
   }
 
   // CONTROLLER
-  @ApiTags('Authentication')
+
   @ApiOperation({
     summary: 'Logout a user',
     description: 'Logout a user',
@@ -167,7 +168,7 @@ export class AuthController {
   }
 
   // CONTROLLER
-  @ApiTags('Authentication')
+
   @ApiOperation({
     summary: 'Get current user information',
     description: 'Get current user information',
@@ -188,7 +189,7 @@ export class AuthController {
   }
 
   // CONTROLLER
-  @ApiTags('Authentication')
+
   @ApiOperation({
     summary: 'Generate CSRF token',
     description: 'Generate CSRF token',
@@ -209,7 +210,7 @@ export class AuthController {
   }
 
   // CONTROLLER
-  @ApiTags('Authentication')
+
   @ApiOperation({
     summary: 'Send Verification (OTP or Magic Link)',
     description: 'Send verification for Signup or Forgot Password',
@@ -230,7 +231,7 @@ export class AuthController {
   }
 
   // CONTROLLER
-  @ApiTags('Authentication')
+
   @ApiOperation({
     summary: 'Verify Code (OTP or Magic Link Token)',
     description: 'Verify code for Signup or Forgot Password',
@@ -248,7 +249,7 @@ export class AuthController {
   }
 
   // CONTROLLER
-  @ApiTags('Authentication')
+
   @ApiOperation({
     summary: 'Update / Reset Password',
     description:
@@ -286,7 +287,7 @@ export class AuthController {
   }
 
   // CONTROLLER
-  @ApiTags('Authentication')
+
   @ApiOperation({
     summary: 'Get active sessions',
     description: 'Get active sessions',
@@ -306,7 +307,7 @@ export class AuthController {
   }
 
   // CONTROLLER
-  @ApiTags('Authentication')
+
   @ApiOperation({
     summary: 'Revoke session',
     description: 'Revoke session',
