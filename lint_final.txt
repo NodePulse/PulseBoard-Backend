@@ -1,0 +1,112 @@
+
+/Users/sachin/Desktop/own-project/PulseBoard/src/app.service.ts
+  30:14  error  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  39:14  error  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/sachin/Desktop/own-project/PulseBoard/src/core/database/postgres-migrations/1786084814823-SessionRefactor.ts
+  6:19  error  'queryRunner' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/sachin/Desktop/own-project/PulseBoard/src/core/decorators/api-endpoint.decorator.ts
+  45:28  warning  Unsafe argument of type `any` assigned to a parameter of type `ApiDataType`  @typescript-eslint/no-unsafe-argument
+
+/Users/sachin/Desktop/own-project/PulseBoard/src/core/decorators/api-success-response.decorator.ts
+  58:15  error    Unsafe assignment of an `any` value                                                @typescript-eslint/no-unsafe-assignment
+  59:40  warning  Unsafe argument of type `any` assigned to a parameter of type `Type<unknown>`      @typescript-eslint/no-unsafe-argument
+  62:40  warning  Unsafe argument of type `any` assigned to a parameter of type `string | Function`  @typescript-eslint/no-unsafe-argument
+  65:25  warning  Unsafe argument of type `any` assigned to a parameter of type `Type<unknown>`      @typescript-eslint/no-unsafe-argument
+  66:49  warning  Unsafe argument of type `any` assigned to a parameter of type `string | Function`  @typescript-eslint/no-unsafe-argument
+  92:15  error    Unsafe assignment of an `any` value                                                @typescript-eslint/no-unsafe-assignment
+
+/Users/sachin/Desktop/own-project/PulseBoard/src/core/decorators/current-user.decorator.ts
+  5:11  error  Unsafe assignment of an `any` value           @typescript-eslint/no-unsafe-assignment
+  6:5   error  Unsafe return of a value of type `any`        @typescript-eslint/no-unsafe-return
+  6:20  error  Unsafe member access .user on an `any` value  @typescript-eslint/no-unsafe-member-access
+
+/Users/sachin/Desktop/own-project/PulseBoard/src/core/decorators/match.decorator.ts
+  12:11  error  Unsafe array destructuring of an `any` array value              @typescript-eslint/no-unsafe-assignment
+  13:11  error  Unsafe assignment of an `any` value                             @typescript-eslint/no-unsafe-assignment
+  13:47  error  Unsafe member access [relatedPropertyName] on an `any` value    @typescript-eslint/no-unsafe-member-access
+  13:47  error  Computed name [relatedPropertyName] resolves to an `any` value  @typescript-eslint/no-unsafe-member-access
+  18:11  error  Unsafe array destructuring of an `any` array value              @typescript-eslint/no-unsafe-assignment
+  26:7   error  Unsafe assignment of an `any` value                             @typescript-eslint/no-unsafe-assignment
+  26:22  error  Unsafe member access .constructor on an `any` value             @typescript-eslint/no-unsafe-member-access
+
+/Users/sachin/Desktop/own-project/PulseBoard/src/core/decorators/not-match.decorator.ts
+  12:11  error  Unsafe array destructuring of an `any` array value              @typescript-eslint/no-unsafe-assignment
+  13:11  error  Unsafe assignment of an `any` value                             @typescript-eslint/no-unsafe-assignment
+  13:47  error  Unsafe member access [relatedPropertyName] on an `any` value    @typescript-eslint/no-unsafe-member-access
+  13:47  error  Computed name [relatedPropertyName] resolves to an `any` value  @typescript-eslint/no-unsafe-member-access
+  18:11  error  Unsafe array destructuring of an `any` array value              @typescript-eslint/no-unsafe-assignment
+  29:7   error  Unsafe assignment of an `any` value                             @typescript-eslint/no-unsafe-assignment
+  29:22  error  Unsafe member access .constructor on an `any` value             @typescript-eslint/no-unsafe-member-access
+
+/Users/sachin/Desktop/own-project/PulseBoard/src/core/guards/session.guard.ts
+  15:11  error    Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  17:11  error    Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  17:31  error    Unsafe member access .cookies on an `any` value                         @typescript-eslint/no-unsafe-member-access
+  23:56  warning  Unsafe argument of type `any` assigned to a parameter of type `string`  @typescript-eslint/no-unsafe-argument
+  28:13  error    Unsafe member access .user on an `any` value                            @typescript-eslint/no-unsafe-member-access
+  29:13  error    Unsafe member access .session on an `any` value                         @typescript-eslint/no-unsafe-member-access
+
+/Users/sachin/Desktop/own-project/PulseBoard/src/core/interceptors/logging.interceptor.ts
+  18:11  error  Unsafe assignment of an `any` value             @typescript-eslint/no-unsafe-assignment
+  19:11  error  Unsafe assignment of an `any` value             @typescript-eslint/no-unsafe-assignment
+  19:24  error  Unsafe member access .method on an `any` value  @typescript-eslint/no-unsafe-member-access
+  20:11  error  Unsafe assignment of an `any` value             @typescript-eslint/no-unsafe-assignment
+  20:21  error  Unsafe member access .url on an `any` value     @typescript-eslint/no-unsafe-member-access
+
+/Users/sachin/Desktop/own-project/PulseBoard/src/core/interceptors/transform.interceptor.ts
+  30:11  error  Unsafe assignment of an `any` value                 @typescript-eslint/no-unsafe-assignment
+  31:11  error  Unsafe assignment of an `any` value                 @typescript-eslint/no-unsafe-assignment
+  31:33  error  Unsafe member access .statusCode on an `any` value  @typescript-eslint/no-unsafe-member-access
+  48:30  error  '_' is assigned a value but never used              @typescript-eslint/no-unused-vars
+  55:11  error  Unsafe assignment of an `any` value                 @typescript-eslint/no-unsafe-assignment
+
+/Users/sachin/Desktop/own-project/PulseBoard/src/core/mail/mail.service.ts
+  26:14  error    'error' is defined but never used                                                             @typescript-eslint/no-unused-vars
+  72:57  warning  Unsafe argument of type `any` assigned to a parameter of type `{ to: string; otp: string; }`  @typescript-eslint/no-unsafe-argument
+
+/Users/sachin/Desktop/own-project/PulseBoard/src/core/middleware/logger.middleware.ts
+  15:7   error  Unsafe return of a value of type `any`                                                                                                   @typescript-eslint/no-unsafe-return
+  35:30  error  '(parsedBody as Record<string, unknown>).message' will use Object's default stringification format ('[object Object]') when stringified  @typescript-eslint/no-base-to-string
+
+/Users/sachin/Desktop/own-project/PulseBoard/src/modules/auth/auth.controller.ts
+   42:3   error    Async method 'getTracker' has no 'await' expression                     @typescript-eslint/require-await
+   44:11  error    Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+   44:19  error    Unsafe call of a(n) `any` typed value                                   @typescript-eslint/no-unsafe-call
+   44:19  error    Unsafe call of a(n) `any` typed value                                   @typescript-eslint/no-unsafe-call
+   44:29  error    Unsafe member access .email on an `any` value                           @typescript-eslint/no-unsafe-member-access
+   44:51  error    Unsafe member access .trim on an `any` value                            @typescript-eslint/no-unsafe-member-access
+   48:3   error    Async method 'throwThrottlingException' has no 'await' expression       @typescript-eslint/require-await
+  160:11  error    Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  162:37  warning  Unsafe argument of type `any` assigned to a parameter of type `string`  @typescript-eslint/no-unsafe-argument
+  275:11  error    Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  279:61  warning  Unsafe argument of type `any` assigned to a parameter of type `string`  @typescript-eslint/no-unsafe-argument
+
+/Users/sachin/Desktop/own-project/PulseBoard/src/modules/auth/auth.service.ts
+   26:10  error  'API_ROUTES' is defined but never used             @typescript-eslint/no-unused-vars
+  270:27  error  '_' is assigned a value but never used             @typescript-eslint/no-unused-vars
+  573:17  error  Unsafe assignment of an `any` value                @typescript-eslint/no-unsafe-assignment
+  574:11  error  Unsafe assignment of an `any` value                @typescript-eslint/no-unsafe-assignment
+  574:30  error  Unsafe member access .hashedOtp on an `any` value  @typescript-eslint/no-unsafe-member-access
+  575:17  error  Empty block statement                              no-empty
+  663:27  error  '_' is assigned a value but never used             @typescript-eslint/no-unused-vars
+  773:17  error  Unsafe assignment of an `any` value                @typescript-eslint/no-unsafe-assignment
+  774:11  error  Unsafe assignment of an `any` value                @typescript-eslint/no-unsafe-assignment
+  774:30  error  Unsafe member access .hashedOtp on an `any` value  @typescript-eslint/no-unsafe-member-access
+  775:17  error  Empty block statement                              no-empty
+
+/Users/sachin/Desktop/own-project/PulseBoard/src/modules/notifications/notifications.gateway.ts
+  49:23  error    Unsafe member access .userId on an `any` value                                                                                                                      @typescript-eslint/no-unsafe-member-access
+  50:7   warning  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+  59:3   error    Async method 'handleDisconnect' has no 'await' expression                                                                                                           @typescript-eslint/require-await
+  61:13  error    Unsafe assignment of an `any` value                                                                                                                                 @typescript-eslint/no-unsafe-assignment
+  61:38  error    Unsafe member access .userId on an `any` value                                                                                                                      @typescript-eslint/no-unsafe-member-access
+  63:9   warning  Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+  71:3   error    Async method 'sendNotificationToUser' has no 'await' expression                                                                                                     @typescript-eslint/require-await
+
+/Users/sachin/Desktop/own-project/PulseBoard/src/modules/notifications/notifications.service.ts
+  111:14  error  '_error' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 77 problems (66 errors, 11 warnings)
+

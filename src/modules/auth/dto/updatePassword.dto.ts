@@ -13,7 +13,8 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdatePasswordDTO {
   @ApiProperty({
-    description: 'Password update mode: "forgot" (unauthenticated OTP reset) or "change" (authenticated password update)',
+    description:
+      'Password update mode: "forgot" (unauthenticated OTP reset) or "change" (authenticated password update)',
     enum: ['forgot', 'change'],
     example: 'forgot',
     required: true,
@@ -25,7 +26,8 @@ export class UpdatePasswordDTO {
   @IsNotEmpty({ message: VALIDATION_MESSAGES.REQUIRED('Mode') })
   mode: 'forgot' | 'change';
   @ApiPropertyOptional({
-    description: 'Email of the user (Required for unauthenticated OTP password reset)',
+    description:
+      'Email of the user (Required for unauthenticated OTP password reset)',
     example: 'user@example.com',
     type: 'string',
   })
@@ -40,7 +42,8 @@ export class UpdatePasswordDTO {
   email?: string;
 
   @ApiPropertyOptional({
-    description: 'Verification OTP code (Required for unauthenticated OTP password reset)',
+    description:
+      'Verification OTP code (Required for unauthenticated OTP password reset)',
     type: 'string',
     example: '123456',
   })
@@ -49,7 +52,8 @@ export class UpdatePasswordDTO {
   code?: string;
 
   @ApiPropertyOptional({
-    description: 'Current password (Required for authenticated password change)',
+    description:
+      'Current password (Required for authenticated password change)',
     type: 'string',
     example: 'CurrentP@ssword123',
   })

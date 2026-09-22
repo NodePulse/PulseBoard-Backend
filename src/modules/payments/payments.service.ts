@@ -25,7 +25,7 @@ export class PaymentsService {
     private readonly transactionsService: TransactionsService,
   ) {}
 
-  private async findSubscriptionPlan(plan: SubscriptionPlan) {
+  private findSubscriptionPlan(plan: SubscriptionPlan) {
     const plans = {
       [SubscriptionPlan.BASIC]: {
         amount: 499,
@@ -51,8 +51,7 @@ export class PaymentsService {
     const { plan, paymentMethod } = dto;
     const subscriptionPlanType = plan as unknown as SubscriptionPlan;
 
-    const subscriptionPlan =
-      await this.findSubscriptionPlan(subscriptionPlanType);
+    const subscriptionPlan = this.findSubscriptionPlan(subscriptionPlanType);
     if (!subscriptionPlan) {
       throw new NotFoundException(RESPONSE_MESSAGES.PAYMENTS.PLAN_NOT_FOUND);
     }
@@ -96,7 +95,7 @@ export class PaymentsService {
   }
 
   public async completePaymentOrder(dto: CompletePaymentOrderDto) {
-    const { orderId, paymentId, method, razorpaySignature: _, status } = dto;
+    const { orderId, paymentId, method, status } = dto;
 
     const order = await this.ordersService.findByRazorpayOrderId(orderId);
     if (!order) {

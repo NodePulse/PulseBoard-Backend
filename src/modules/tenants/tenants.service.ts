@@ -17,7 +17,10 @@ import { TENANT_CONSTANTS } from '../../core/constants/tenants';
 import { UserRepository } from '../users/repositories/user.repository';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationType, NotificationChannel } from '../notifications/entities/notification-type.enum';
+import {
+  NotificationType,
+  NotificationChannel,
+} from '../notifications/entities/notification-type.enum';
 
 @Injectable()
 export class TenantsService {

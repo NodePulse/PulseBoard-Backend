@@ -3,7 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order, OrderStatus } from './entities/order.entity';
 import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationType, NotificationChannel } from '../notifications/entities/notification-type.enum';
+import {
+  NotificationType,
+  NotificationChannel,
+} from '../notifications/entities/notification-type.enum';
 
 @Injectable()
 export class OrdersService {

@@ -99,9 +99,8 @@ export class NotificationsService {
 
     // 2. Persist notification in database
     const notification = this.notificationRepository.create(data);
-    const savedNotification = await this.notificationRepository.save(
-      notification,
-    );
+    const savedNotification =
+      await this.notificationRepository.save(notification);
 
     // 3. Push real-time notification to user's WebSocket room
     try {
@@ -109,7 +108,7 @@ export class NotificationsService {
         savedNotification.recipientId,
         savedNotification,
       );
-    } catch (error) {
+    } catch (_error) {
       // Log socket emission error without interrupting flow
     }
 

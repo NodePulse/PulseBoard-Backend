@@ -58,7 +58,7 @@ export class UsersService {
     }
 
     switch (setupMfaDto.mfaType) {
-      case MFAType.TOTP:
+      case MFAType.TOTP: {
         const mfaSecret = generateSecret({
           length: VALIDATION_LIMITS.MFA_SECRET.LENGTH,
         });
@@ -77,6 +77,7 @@ export class UsersService {
         const totpQrCode = await QrCode.toDataURL(otpAuthUrl);
 
         return { totpQrCode, mfaSecret };
+      }
 
       case MFAType.EMAIL_OTP:
         break;

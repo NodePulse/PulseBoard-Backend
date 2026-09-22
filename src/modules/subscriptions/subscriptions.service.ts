@@ -7,7 +7,10 @@ import {
   SubscriptionStatus,
 } from './entities/subscription.entity';
 import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationType, NotificationChannel } from '../notifications/entities/notification-type.enum';
+import {
+  NotificationType,
+  NotificationChannel,
+} from '../notifications/entities/notification-type.enum';
 
 @Injectable()
 export class SubscriptionsService {
@@ -40,7 +43,8 @@ export class SubscriptionsService {
       currentPeriodEnd,
     });
 
-    const savedSubscription = await this.subscriptionRepository.save(subscription);
+    const savedSubscription =
+      await this.subscriptionRepository.save(subscription);
 
     await this.notificationsService.createNotification({
       recipientId: userId,

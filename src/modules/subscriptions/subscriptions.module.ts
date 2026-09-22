@@ -7,7 +7,11 @@ import { SessionModule } from '../session/session.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Subscription]), SessionModule, NotificationsModule],
+  imports: [
+    TypeOrmModule.forFeature([Subscription]),
+    SessionModule,
+    NotificationsModule,
+  ],
   controllers: [SubscriptionsController],
   providers: [SubscriptionsService],
   exports: [SubscriptionsService],

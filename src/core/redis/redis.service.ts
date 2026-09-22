@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { RedisConfig } from '../../config/config.interface';
@@ -25,7 +30,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         ? undefined
         : { servername: config.host },
       retryStrategy(times) {
-        logger.warn(`Connection lost. Retrying connection (attempt ${times})...`);
+        logger.warn(
+          `Connection lost. Retrying connection (attempt ${times})...`,
+        );
         return Math.min(times * 100, 10000);
       },
     });
