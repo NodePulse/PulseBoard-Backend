@@ -21,25 +21,27 @@ export class OrdersService {
     amount: number;
     currency: string;
     plan?: string;
-    razorpayOrderId?: string;
+    billingCycle?: string;
+    cashfreeOrderId?: string;
   }): Promise<Order> {
     const order = this.orderRepository.create({
       userId: data.userId,
       amount: data.amount,
       currency: data.currency,
       plan: data.plan,
-      razorpayOrderId: data.razorpayOrderId,
+      billingCycle: data.billingCycle,
+      cashfreeOrderId: data.cashfreeOrderId,
       status: OrderStatus.PENDING,
     });
 
     return this.orderRepository.save(order);
   }
 
-  public async findByRazorpayOrderId(
-    razorpayOrderId: string,
+  public async findByCashfreeOrderId(
+    cashfreeOrderId: string,
   ): Promise<Order | null> {
     return this.orderRepository.findOne({
-      where: { razorpayOrderId },
+      where: { cashfreeOrderId },
     });
   }
 

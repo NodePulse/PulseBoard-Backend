@@ -44,6 +44,13 @@ export class UsersService {
     return result;
   }
 
+  async updateProfilePicture(userId: string) {
+    const user = await this.userRepository.findUserById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+  }
+
   async setupMfa(userId: string, setupMfaDto: SetupMfaDTO) {
     const user = await this.userRepository.findUserById(userId);
 

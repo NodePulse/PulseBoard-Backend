@@ -2,7 +2,10 @@ import { IsEnum, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { VALIDATION_MESSAGES } from 'src/core/constants/messages';
 import { PaymentMethod } from '../entities/payment.entity';
-import { SubscriptionPlan } from 'src/modules/subscriptions/entities/subscription.entity';
+import {
+  SubscriptionPlan,
+  BillingCycle,
+} from 'src/modules/subscriptions/entities/subscription.entity';
 
 export class CreatePaymentOrderDto {
   @ApiProperty({
@@ -18,9 +21,21 @@ export class CreatePaymentOrderDto {
   plan: SubscriptionPlan;
 
   @ApiProperty({
+    description: 'Billing Cycle',
+    enum: BillingCycle,
+    example: BillingCycle.MONTHLY,
+    required: true,
+  })
+  @IsEnum(BillingCycle, {
+    message: VALIDATION_MESSAGES.TYPE_INVALID('Billing Cycle'),
+  })
+  @IsNotEmpty({ message: VALIDATION_MESSAGES.REQUIRED('Billing Cycle') })
+  billingCycle: BillingCycle;
+
+  @ApiProperty({
     description: 'Payment Method',
     enum: PaymentMethod,
-    example: PaymentMethod.RAZORPAY,
+    example: PaymentMethod.CASHFREE,
     required: true,
   })
   @IsEnum(PaymentMethod, {

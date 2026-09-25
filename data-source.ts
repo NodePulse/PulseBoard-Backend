@@ -13,5 +13,6 @@ export const AppDataSource = new DataSource({
   ssl: {
     rejectUnauthorized: false,
   },
+  entities: ['src/**/*.entity.ts'],
   migrations: ['src/core/database/postgres-migrations/*.ts'],
 });

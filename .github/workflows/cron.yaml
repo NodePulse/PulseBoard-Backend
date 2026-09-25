@@ -1,0 +1,29 @@
+name: test
+on: pull_request
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      LAYERBASE_API_KEY: ${{ secrets.LAYERBASE_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Layerbase CLI
+        run: npm i -g layerbase
+
+      - name: Create transient database
+        id: db
+        run: |
+          URL=$(layerbase cloud create ci-$GITHUB_RUN_ID \
+            --engine postgresql --ttl 2h --json | jq -r .connectionString)
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Run tests
+        run: npm test
+        env:
+          DATABASE_URL: ${{ steps.db.outputs.url }}
+
+      - name: Delete database
+        if: always()
+        run: layerbase cloud delete ci-$GITHUB_RUN_ID --yes

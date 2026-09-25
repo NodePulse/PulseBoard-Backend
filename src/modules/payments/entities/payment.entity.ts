@@ -24,7 +24,7 @@ export enum PaymentStatus {
 }
 
 export enum PaymentMethod {
-  RAZORPAY = 'RAZORPAY',
+  CASHFREE = 'CASHFREE',
   CARD = 'CARD',
   BANK_TRANSFER = 'BANK_TRANSFER',
   WALLET = 'WALLET',
@@ -32,7 +32,7 @@ export enum PaymentMethod {
 
 @Entity('payments')
 @Index(['userId', 'status'])
-@Index(['razorpayPaymentId'])
+@Index(['cashfreePaymentId'])
 export class Payment {
   @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
@@ -88,20 +88,20 @@ export class Payment {
 
   @ApiProperty()
   @Column({
-    name: 'razorpay_payment_id',
+    name: 'cashfree_payment_id',
     length: 255,
     nullable: true,
   })
-  razorpayPaymentId: string | null;
+  cashfreePaymentId: string | null;
 
   @ApiProperty()
   @Column({
-    name: 'razorpay_signature',
+    name: 'cashfree_signature',
     length: 512,
     nullable: true,
     select: false,
   })
-  razorpaySignature: string | null;
+  cashfreeSignature: string | null;
 
   @ApiProperty()
   @OneToMany(() => Transaction, (transaction) => transaction.payment)

@@ -30,10 +30,10 @@ export interface MailConfig {
   fromEmail: string;
 }
 
-export interface RazorpayConfig {
-  keyId: string;
+export interface CashfreeConfig {
+  appId: string;
   secret: string;
-  // webhookSecret: string;
+  environment: string;
 }
 
 export interface RabbitMQConfig {
@@ -46,6 +46,6 @@ export interface AllConfig {
   jwt: JwtConfig;
   redis: RedisConfig;
   mail: MailConfig;
-  razorpay: RazorpayConfig;
+  cashfree: CashfreeConfig;
   rabbitmq: RabbitMQConfig;
 }

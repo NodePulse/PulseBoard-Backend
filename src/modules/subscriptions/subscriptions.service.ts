@@ -23,11 +23,16 @@ export class SubscriptionsService {
   public async activateSubscription(
     userId: string,
     plan: SubscriptionPlan,
+    billingCycle: string = 'MONTHLY',
   ): Promise<Subscription> {
-    // 1 month subscription
     const currentPeriodStart = new Date();
     const currentPeriodEnd = new Date();
-    currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
+    
+    if (billingCycle === 'YEARLY') {
+      currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 1);
+    } else {
+      currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
+    }
 
     // Cancel any existing active subscriptions for this user
     await this.subscriptionRepository.update(
@@ -38,6 +43,7 @@ export class SubscriptionsService {
     const subscription = this.subscriptionRepository.create({
       userId,
       plan,
+      billingCycle: billingCycle as any,
       status: SubscriptionStatus.ACTIVE,
       currentPeriodStart,
       currentPeriodEnd,

@@ -1,4 +1,11 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { SessionGuard } from 'src/core/guards/session.guard';
 import { CurrentUser } from 'src/core/decorators/current-user.decorator';
@@ -11,6 +18,8 @@ import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { ApiEndpoint } from 'src/core/decorators/api-endpoint.decorator';
 import { ResponseMessage } from 'src/core/decorators/response-message.decorator';
 import { RESPONSE_MESSAGES } from 'src/core/constants/messages';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Express } from 'express';
 
 @ApiTags('Users')
 @Controller(API_ROUTES.USERS.ROOT)
@@ -39,6 +48,17 @@ export class UsersController {
     @CurrentUser() user: SessionPayload,
   ): Promise<UpdateResult> {
     return this.usersService.changePassword(changePasswordDto, user.sub);
+  }
+
+  @Post('update-profile-pic')
+  @UseInterceptors(FileInterceptor('image'))
+  @UseGuards(SessionGuard)
+  async updateProfilePicture(
+    @CurrentUser() user: SessionPayload,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    console.log('file ============>', file);
+    return this.usersService.updateProfilePicture(user.sub);
   }
 
   // CONTROLLER

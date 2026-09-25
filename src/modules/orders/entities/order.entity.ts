@@ -68,13 +68,17 @@ export class Order {
   status: OrderStatus;
 
   @ApiProperty()
-  @Column({ name: 'razorpay_order_id', length: 255, nullable: true })
+  @Column({ name: 'cashfree_order_id', length: 255, nullable: true })
   @Index()
-  razorpayOrderId: string | null;
+  cashfreeOrderId: string | null;
 
   @ApiProperty()
   @Column({ length: 100, nullable: true })
   plan: string | null;
+
+  @ApiProperty()
+  @Column({ name: 'billing_cycle', length: 20, nullable: true })
+  billingCycle: string | null;
 
   // The relationship will be mapped in the Payment entity
   @ApiProperty()

@@ -24,6 +24,11 @@ export enum SubscriptionStatus {
   PAST_DUE = 'PAST_DUE',
 }
 
+export enum BillingCycle {
+  MONTHLY = 'MONTHLY',
+  YEARLY = 'YEARLY',
+}
+
 @Entity('subscriptions')
 export class Subscription {
   @ApiProperty()
@@ -54,6 +59,14 @@ export class Subscription {
     type: 'varchar',
   })
   plan: SubscriptionPlan;
+
+  @ApiProperty()
+  @Column({
+    type: 'varchar',
+    default: BillingCycle.MONTHLY,
+    name: 'billing_cycle',
+  })
+  billingCycle: BillingCycle;
 
   @ApiProperty()
   @Column({

@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Payment } from './entities/payment.entity';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
-import { RazorpayService } from './razorpay.service';
+import { CashfreeService } from './cashfree.service';
 import { PaymentsRepository } from './repositories/payments.repository';
 import { SessionModule } from '../session/session.module';
 import { OrdersModule } from '../orders/orders.module';
@@ -19,6 +19,6 @@ import { TransactionsModule } from '../transactions/transactions.module';
     TransactionsModule,
   ],
   controllers: [PaymentsController],
-  providers: [PaymentsService, RazorpayService, PaymentsRepository],
+  providers: [PaymentsService, CashfreeService, PaymentsRepository],
 })
 export class PaymentsModule {}
