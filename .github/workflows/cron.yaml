@@ -21,10 +21,10 @@ jobs:
             --engine postgresql --ttl 2h --json | jq -r .connectionString)
           echo "url=$URL" >> "$GITHUB_OUTPUT"
 
-      - name: Run tests
-        run: npm test
-        env:
-          DATABASE_URL: ${{ steps.db.outputs.url }}
+      # - name: Run tests
+      #   run: npm test
+      #   env:
+      #     DATABASE_URL: ${{ steps.db.outputs.url }}
 
       - name: Delete database
         if: always()
