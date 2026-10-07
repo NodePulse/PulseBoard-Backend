@@ -27,7 +27,7 @@ export class SubscriptionsService {
   ): Promise<Subscription> {
     const currentPeriodStart = new Date();
     const currentPeriodEnd = new Date();
-    
+
     if (billingCycle === 'YEARLY') {
       currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 1);
     } else {

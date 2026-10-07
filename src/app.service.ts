@@ -27,7 +27,7 @@ export class AppService {
     try {
       await this.dataSource.query('SELECT 1');
       dbStatus = 'up';
-    } catch (error) {
+    } catch {
       dbStatus = 'down';
     }
 
@@ -36,7 +36,7 @@ export class AppService {
       if (ping === 'PONG') {
         redisStatus = 'up';
       }
-    } catch (error) {
+    } catch {
       redisStatus = 'down';
     }
 

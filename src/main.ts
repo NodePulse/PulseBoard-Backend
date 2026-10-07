@@ -3,7 +3,7 @@ import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { AllConfig } from './config/config.interface';
 import { ValidationPipe } from '@nestjs/common';
-import { TransformInterceptor } from './core/interceptors/transform.interceptor';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { LoggingInterceptor } from './core/interceptors/logging.interceptor';
 import { HttpExceptionFilter } from './core/filters/http-exception.filter';
 import cookieParser from 'cookie-parser';
@@ -46,7 +46,7 @@ async function bootstrap() {
   const reflector = app.get(Reflector);
   app.useGlobalInterceptors(
     new LoggingInterceptor(),
-    new TransformInterceptor(reflector),
+    new ResponseInterceptor(reflector),
   );
   app.useGlobalFilters(new HttpExceptionFilter());
 

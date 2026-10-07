@@ -23,7 +23,7 @@ export class MailService implements OnModuleInit {
   async onModuleInit() {
     try {
       await this.client.connect();
-    } catch (error) {
+    } catch {
       this.logger.warn(
         'Could not connect to RabbitMQ broker on init, fallback to direct mail sending when needed.',
       );
@@ -69,7 +69,9 @@ export class MailService implements OnModuleInit {
       this.logger.warn(
         `RabbitMQ emit failed: ${error}. Sending password reset email directly.`,
       );
-      await this.mailController.handleSendPasswordReset(data as any);
+      await this.mailController.handleSendPasswordReset(
+        data as { to: string; otp: string },
+      );
     }
   }
 

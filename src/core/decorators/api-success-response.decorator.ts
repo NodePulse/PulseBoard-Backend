@@ -2,7 +2,7 @@ import { applyDecorators, Type } from '@nestjs/common';
 import { ApiExtraModels, ApiResponse, getSchemaPath } from '@nestjs/swagger';
 import { SuccessResponseDTO } from '../dto/success-response.dto';
 
-type ApiDataType =
+export type ApiDataType =
   | Type<unknown>
   | 'string'
   | 'boolean'
@@ -50,20 +50,21 @@ export const ApiSuccessResponse = (
   } else if (isObjectMap) {
     const properties: Record<string, any> = {};
     for (const [key, value] of Object.entries(
-      typeOrDto as Record<string, any>,
+      typeOrDto as Record<string, unknown>,
     )) {
       if (typeof value === 'string') {
         properties[key] = { type: value };
       } else if (Array.isArray(value)) {
-        const itemClass = value[0];
+        const itemClass = value[0] as Type<unknown>;
         if (itemClass) extraModels.add(itemClass);
         properties[key] = {
           type: 'array',
           items: { $ref: getSchemaPath(itemClass) },
         };
       } else {
-        extraModels.add(value);
-        properties[key] = { $ref: getSchemaPath(value) };
+        const cls = value as Type<unknown>;
+        extraModels.add(cls);
+        properties[key] = { $ref: getSchemaPath(cls) };
       }
     }
     dataPropertySchema = {

@@ -16,9 +16,11 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { LoggerMiddleware } from './core/middleware/logger.middleware';
+import { ResponseModule } from './common/response.module';
 
 @Module({
   imports: [
+    ResponseModule,
     AppConfigModule,
     DatabaseModule,
     RedisModule,

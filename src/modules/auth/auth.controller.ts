@@ -18,11 +18,11 @@ import { SendVerificationDTO } from './dto/sendVerification.dto';
 import { VerifyDTO } from './dto/verify.dto';
 import { UpdatePasswordDTO } from './dto/updatePassword.dto';
 import { API_ROUTES } from '../../core/constants/routes';
-import { ResponseMessage } from '../../core/decorators/response-message.decorator';
 import { RESPONSE_MESSAGES } from '../../core/constants/messages';
 import { SessionGuard } from '../../core/guards/session.guard';
 import { CurrentUser } from '../../core/decorators/current-user.decorator';
 import type { Request, Response } from 'express';
+import { ResponseService } from '../../common/services/response.service';
 import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { User } from '../users/entities/user.entity';
 import {
@@ -70,7 +70,10 @@ export interface SessionPayload {
 @ApiTags('Authentication')
 @Controller(API_ROUTES.AUTH.ROOT)
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly response: ResponseService,
+  ) {}
 
   // CONTROLLER
 
@@ -89,7 +92,8 @@ export class AuthController {
   })
   @Post(API_ROUTES.AUTH.REGISTER)
   public async register(@Body() dto: RegisterUserDTO) {
-    return this.authService.registerUser(dto);
+    const result = await this.authService.registerUser(dto);
+    return this.response.created(result, RESPONSE_MESSAGES.USER_REGISTERED);
   }
 
   // CONTROLLER
@@ -114,7 +118,6 @@ export class AuthController {
     429: RESPONSE_MESSAGES.AUTH.TOO_MANY_REQUESTS,
   })
   @Post(API_ROUTES.AUTH.LOGIN)
-  @ResponseMessage(RESPONSE_MESSAGES.AUTH.LOGIN_SUCCESS)
   public async login(
     @Body() dto: LoginUserDTO,
     @Req() req: Request,
@@ -134,7 +137,7 @@ export class AuthController {
       this.authService.getSessionCookieOptions(),
     );
 
-    return { user };
+    return this.response.success({ user }, RESPONSE_MESSAGES.AUTH.LOGIN_SUCCESS, HttpStatus.CREATED);
   }
 
   // CONTROLLER
@@ -153,18 +156,17 @@ export class AuthController {
   @Post(API_ROUTES.AUTH.LOGOUT)
   @UseGuards(SessionGuard)
   @HttpCode(200)
-  @ResponseMessage(RESPONSE_MESSAGES.LOGOUT_SUCCESS)
   public async logout(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     const sessionId = req.cookies?.[SESSION_COOKIE_NAME];
     if (sessionId) {
-      await this.authService.logout(sessionId);
+      await this.authService.logout(sessionId as string);
     }
 
     res.clearCookie(SESSION_COOKIE_NAME, { path: '/' });
-    return { loggedOut: true };
+    return this.response.success({ loggedOut: true }, RESPONSE_MESSAGES.LOGOUT_SUCCESS);
   }
 
   // CONTROLLER
@@ -182,10 +184,9 @@ export class AuthController {
   })
   @Get(API_ROUTES.AUTH.ME)
   @UseGuards(SessionGuard)
-  @ResponseMessage('Session retrieved successfully')
   public async getMe(@CurrentUser() user: SessionPayload) {
     const userProfile = await this.authService.getMe(user.sub);
-    return { user: userProfile };
+    return this.response.success({ user: userProfile }, 'Session retrieved successfully');
   }
 
   // CONTROLLER
@@ -203,10 +204,9 @@ export class AuthController {
   })
   @Get(API_ROUTES.AUTH.CSRF_TOKEN)
   @UseGuards(SessionGuard)
-  @ResponseMessage('CSRF token generated')
   public async getCsrfToken(@CurrentUser() user: SessionPayload) {
     const token = await this.authService.generateCsrfToken(user.sub);
-    return { csrfToken: token };
+    return this.response.success({ csrfToken: token }, 'CSRF token generated');
   }
 
   // CONTROLLER
@@ -227,7 +227,8 @@ export class AuthController {
   @UseGuards(ForgotPasswordThrottlerGuard)
   @Throttle({ default: { limit: 3, ttl: 900000 } })
   public async sendVerification(@Body() dto: SendVerificationDTO) {
-    return this.authService.sendVerification(dto);
+    const result = await this.authService.sendVerification(dto);
+    return this.response.success(result, RESPONSE_MESSAGES.RESEND_SUCCESS, HttpStatus.CREATED);
   }
 
   // CONTROLLER
@@ -245,7 +246,8 @@ export class AuthController {
   })
   @Post(API_ROUTES.AUTH.VERIFY)
   public async verify(@Body() dto: VerifyDTO) {
-    return this.authService.verify(dto);
+    const result = await this.authService.verify(dto);
+    return this.response.success(result, RESPONSE_MESSAGES.VERIFICATION_SUCCESS, HttpStatus.CREATED);
   }
 
   // CONTROLLER
@@ -277,13 +279,16 @@ export class AuthController {
     let currentUserSub: string | undefined = undefined;
 
     if (sessionId) {
-      const session = await this.authService.getSessionById(sessionId);
+      const session = await this.authService.getSessionById(
+        sessionId as string,
+      );
       if (session && session.status === 'ACTIVE') {
         currentUserSub = session.userId;
       }
     }
 
-    return this.authService.resetPassword(dto, currentUserSub);
+    const result = await this.authService.resetPassword(dto, currentUserSub);
+    return this.response.success(result, 'Password updated successfully', HttpStatus.CREATED);
   }
 
   // CONTROLLER
@@ -301,9 +306,9 @@ export class AuthController {
   })
   @Get(API_ROUTES.AUTH.SESSIONS)
   @UseGuards(SessionGuard)
-  @ResponseMessage('Active sessions retrieved successfully')
   public async getSessions(@CurrentUser() user: SessionPayload) {
-    return this.authService.getActiveSessions(user.sub);
+    const sessions = await this.authService.getActiveSessions(user.sub);
+    return this.response.success(sessions, 'Active sessions retrieved successfully');
   }
 
   // CONTROLLER
@@ -321,12 +326,11 @@ export class AuthController {
   })
   @Delete(`${API_ROUTES.AUTH.SESSIONS}/:id`)
   @UseGuards(SessionGuard)
-  @ResponseMessage(RESPONSE_MESSAGES.SESSION_REVOKED)
   public async revokeSession(
     @CurrentUser() user: SessionPayload,
     @Param('id') id: string,
   ) {
     await this.authService.revokeSession(user.sub, id);
-    return true;
+    return this.response.success(true, RESPONSE_MESSAGES.SESSION_REVOKED);
   }
 }

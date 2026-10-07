@@ -108,7 +108,7 @@ export class NotificationsService {
         savedNotification.recipientId,
         savedNotification,
       );
-    } catch (_error) {
+    } catch {
       // Log socket emission error without interrupting flow
     }
 

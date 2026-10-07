@@ -20,7 +20,7 @@ export class SessionGuard implements CanActivate {
       throw new UnauthorizedException(RESPONSE_MESSAGES.UNAUTHORIZED_TOKEN);
     }
 
-    const session = await this.sessionCacheService.get(sessionId);
+    const session = await this.sessionCacheService.get(sessionId as string);
     if (!session || session.status !== 'ACTIVE') {
       throw new UnauthorizedException('Session revoked or inactive');
     }

@@ -47,7 +47,7 @@ export class NotificationsGateway
 
       const userId = session.userId;
       (client as any).userId = userId;
-      client.join(`user_${userId}`);
+      void client.join(`user_${userId}`);
 
       console.log(`User ${userId} connected to notification gateway`);
     } catch (error) {
@@ -60,7 +60,7 @@ export class NotificationsGateway
     try {
       const userId = (client as any).userId || client.handshake.auth?.userId;
       if (userId) {
-        client.leave(`user_${userId}`);
+        void client.leave(`user_${userId}`);
       }
       console.log(`User ${userId || 'unknown'} disconnected`);
     } catch (error) {

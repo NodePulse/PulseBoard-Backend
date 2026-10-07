@@ -1,10 +1,13 @@
 import { applyDecorators } from '@nestjs/common';
 import { ApiResponse, ApiExtraModels, getSchemaPath } from '@nestjs/swagger';
 import { ErrorResponseDTO } from '../dto/error-response.dto';
-import { ApiSuccessResponse } from './api-success-response.decorator';
+import {
+  ApiSuccessResponse,
+  ApiDataType,
+} from './api-success-response.decorator';
 
 export interface SuccessEndpointConfig {
-  type?: any;
+  type?: ApiDataType;
   message?: string;
   description?: string;
 }

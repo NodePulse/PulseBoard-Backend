@@ -23,7 +23,8 @@ export class CompletePaymentOrderDto {
   paymentId: string;
 
   @ApiPropertyOptional({
-    description: 'Cashfree Signature (optional if verification happens server-side via API)',
+    description:
+      'Cashfree Signature (optional if verification happens server-side via API)',
     example: 'signature_abc',
   })
   @IsString({ message: VALIDATION_MESSAGES.TYPE_INVALID('Signature') })

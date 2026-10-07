@@ -224,6 +224,10 @@ export class AuthService {
       });
     }
 
+    if (user.isMfaEnabled) {
+      return;
+    }
+
     // Limit concurrent sessions to max 5 (Policy B: revoke oldest)
     const maxSessions = 5;
     const activeSessions = await this.sessionRepository.find({
