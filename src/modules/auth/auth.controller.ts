@@ -9,6 +9,7 @@ import {
   Delete,
   Param,
   HttpCode,
+  BadRequestException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiEndpoint } from '../../core/decorators/api-endpoint.decorator';
@@ -245,6 +246,8 @@ export class AuthController {
     400: RESPONSE_MESSAGES.VERIFICATION_INVALID,
   })
   @Post(API_ROUTES.AUTH.VERIFY)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
   public async verify(@Body() dto: VerifyDTO) {
     const result = await this.authService.verify(dto);
     return this.response.success(result, RESPONSE_MESSAGES.VERIFICATION_SUCCESS, HttpStatus.CREATED);
@@ -287,7 +290,18 @@ export class AuthController {
       }
     }
 
-    const result = await this.authService.resetPassword(dto, currentUserSub);
+    const handlers: Record<string, (dto: UpdatePasswordDTO, sub?: string) => Promise<{ message: string; updatedAt: string }>> = {
+      change: (d, s) => this.authService.changePassword(d, s),
+      forgot: (d) => this.authService.resetPasswordForgot(d),
+    };
+
+    const handler = handlers[dto.mode];
+    if (!handler) {
+      throw new BadRequestException('Invalid mode. Supported modes: ' + Object.keys(handlers).join(', '));
+    }
+
+    const result = await handler(dto, currentUserSub);
+
     return this.response.success(result, 'Password updated successfully', HttpStatus.CREATED);
   }
 

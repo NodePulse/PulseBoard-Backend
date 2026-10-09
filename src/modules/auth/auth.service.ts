@@ -36,6 +36,9 @@ import {
   NotificationType,
   NotificationChannel,
 } from '../notifications/entities/notification-type.enum';
+import { VerificationStrategy } from './strategies/verification-strategy.interface';
+import { SignupVerificationStrategy } from './strategies/signup-verification.strategy';
+import { ForgotPasswordVerificationStrategy } from './strategies/forgot-password-verification.strategy';
 
 @Injectable()
 export class AuthService {
@@ -326,101 +329,36 @@ export class AuthService {
       };
     }
 
-    if (type === VERIFICATION_TYPES.SIGNUP) {
-      if (user.isEmailVerified) {
-        throw new BadRequestException(RESPONSE_MESSAGES.EMAIL_ALREADY_VERIFIED);
-      }
+    const verificationStrategies: Record<string, VerificationStrategy> = {
+      [VERIFICATION_TYPES.SIGNUP]: new SignupVerificationStrategy(
+        this.userRepository,
+        this.mailService,
+        this.configService,
+        this.redisService,
+        this.notificationsService,
+        () => this.generateSecureOtp(),
+      ),
+      [VERIFICATION_TYPES.FORGOT_PASSWORD]: new ForgotPasswordVerificationStrategy(
+        this.userRepository,
+        this.mailService,
+        this.redisService,
+        () => this.generateSecureOtp(),
+      ),
+    };
 
-      if (method === VERIFICATION_METHODS.MAGIC) {
-        const verificationToken = randomUUID();
-        user.verificationToken = verificationToken;
-        user.verificationOtp = null;
-        user.verificationExpiresAt = verificationExpiresAt;
-        const frontendUrl = this.configService.get<string>('app.frontendUrl');
-        const magicLink = `${frontendUrl}/verify-magic?token=${verificationToken}`;
-
-        await this.mailService.sendVerificationEmail({
-          to: email,
-          magicLink,
-          jobId: randomUUID(),
-        });
-        await this.userRepository.save(user);
-
-        return {
-          message: 'Verification magic link sent successfully to email',
-          email,
-          type,
-          method,
-          expiresIn,
-          expiresAt: verificationExpiresAt.toISOString(),
-          resendCooldown,
-        };
-      } else {
-        const verificationOtp = this.generateSecureOtp();
-        const hashedOtp = await bcrypt.hash(verificationOtp, 10);
-
-        // Store hashed OTP in Redis securely
-        await this.redisService.set(
-          REDIS_KEYS.OTP(email),
-          hashedOtp,
-          expiresIn,
-        );
-
-        // Reset attempt counter
-        await this.redisService.del(REDIS_KEYS.OTP_ATTEMPTS(email));
-
-        await this.mailService.sendVerificationEmail({
-          to: email,
-          otp: verificationOtp,
-          jobId: randomUUID(),
-        });
-
-        return {
-          message: 'Verification OTP code sent successfully to email',
-          email,
-          type,
-          method,
-          expiresIn,
-          expiresAt: verificationExpiresAt.toISOString(),
-          resendCooldown,
-        };
-      }
-    } else if (type === VERIFICATION_TYPES.FORGOT_PASSWORD) {
-      if (method === VERIFICATION_METHODS.MAGIC) {
-        throw new BadRequestException(
-          'Magic link not supported for password reset',
-        );
-      }
-
-      const resetOtp = this.generateSecureOtp();
-      const hashedOtp = await bcrypt.hash(resetOtp, 10);
-
-      await this.redisService.set(
-        REDIS_KEYS.PASSWORD_RESET_OTP(email),
-        hashedOtp,
-        expiresIn,
-      );
-
-      // Reset attempt counter
-      await this.redisService.del(REDIS_KEYS.OTP_ATTEMPTS(email));
-
-      await this.mailService.sendPasswordResetEmail({
-        to: email,
-        otp: resetOtp,
-      });
-
-      return {
-        message: RESPONSE_MESSAGES.AUTH.FORGOT_PASSWORD_SUCCESS,
-        email,
-        type,
-        method: method || VERIFICATION_METHODS.OTP,
-        expiresIn,
-        expiresAt: verificationExpiresAt.toISOString(),
-        resendCooldown,
-      };
+    const strategy = verificationStrategies[type];
+    if (!strategy) {
+      throw new BadRequestException(VALIDATION_MESSAGES.TYPE_INVALID('Type'));
     }
 
-    throw new BadRequestException(VALIDATION_MESSAGES.TYPE_INVALID('Type'));
+    return strategy.send({
+      user,
+      email,
+      method: method || VERIFICATION_METHODS.OTP,
+      verificationExpiresAt,
+      expiresIn,
+      resendCooldown,
+    });
   }
 
   // SERVICE
@@ -435,174 +373,33 @@ export class AuthService {
     const { email, code, type, method } = dto;
     const verifiedAt = new Date().toISOString();
 
-    if (type === VERIFICATION_TYPES.SIGNUP) {
-      if (method === VERIFICATION_METHODS.MAGIC) {
-        const user = await this.userRepository.findOne({
-          where: { verificationToken: code },
-        });
+    const verificationStrategies: Record<string, VerificationStrategy> = {
+      [VERIFICATION_TYPES.SIGNUP]: new SignupVerificationStrategy(
+        this.userRepository,
+        this.mailService,
+        this.configService,
+        this.redisService,
+        this.notificationsService,
+        () => this.generateSecureOtp(),
+      ),
+      [VERIFICATION_TYPES.FORGOT_PASSWORD]: new ForgotPasswordVerificationStrategy(
+        this.userRepository,
+        this.mailService,
+        this.redisService,
+        () => this.generateSecureOtp(),
+      ),
+    };
 
-        if (!user) {
-          throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
-        }
-
-        if (
-          user.verificationExpiresAt &&
-          new Date() > user.verificationExpiresAt
-        ) {
-          throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_EXPIRED);
-        }
-
-        user.isEmailVerified = true;
-        user.verificationToken = null;
-        user.verificationOtp = null;
-        user.verificationExpiresAt = null;
-
-        await this.userRepository.save(user);
-        await this.mailService.cleanCompletedJobs();
-
-        await this.notificationsService.createNotification({
-          recipientId: user.id,
-          type: NotificationType.SYSTEM,
-          channel: NotificationChannel.IN_APP,
-          title: 'Welcome to PulseBoard!',
-          body: 'Your account has been successfully verified. Let’s get started!',
-        });
-
-        return {
-          message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS,
-          email: user.email,
-          type,
-          method,
-          verified: true,
-          verifiedAt,
-        };
-      } else {
-        if (!email)
-          throw new BadRequestException(VALIDATION_MESSAGES.REQUIRED('Email'));
-        const user = await this.userRepository.findUserByEmail(email);
-        if (!user)
-          throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
-
-        const storedHashedOtp = await this.redisService.get(
-          REDIS_KEYS.OTP(email),
-        );
-        if (!storedHashedOtp) {
-          throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_EXPIRED);
-        }
-
-        // Brute-force protection: Check failed attempts (max 5)
-        const attemptsKey = REDIS_KEYS.OTP_ATTEMPTS(email);
-        const attempts = parseInt(
-          (await this.redisService.get(attemptsKey)) || '0',
-          10,
-        );
-
-        if (attempts >= 5) {
-          await this.redisService.del(REDIS_KEYS.OTP(email));
-          await this.redisService.del(attemptsKey);
-          throw new BadRequestException(
-            'Too many failed attempts. Verification code invalidated. Please request a new code.',
-          );
-        }
-
-        const isValid = await bcrypt.compare(code, storedHashedOtp);
-        if (!isValid) {
-          await this.redisService.set(
-            attemptsKey,
-            (attempts + 1).toString(),
-            300,
-          );
-          throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
-        }
-
-        user.isEmailVerified = true;
-        user.verificationToken = null;
-        user.verificationOtp = null;
-        user.verificationExpiresAt = null;
-
-        await this.userRepository.save(user);
-        await this.redisService.del(REDIS_KEYS.OTP(email));
-        await this.redisService.del(attemptsKey);
-
-        await this.notificationsService.createNotification({
-          recipientId: user.id,
-          type: NotificationType.SYSTEM,
-          channel: NotificationChannel.IN_APP,
-          title: 'Welcome to PulseBoard!',
-          body: 'Your account has been successfully verified. Let’s get started!',
-        });
-
-        return {
-          message: RESPONSE_MESSAGES.VERIFICATION_SUCCESS,
-          email,
-          type,
-          method,
-          verified: true,
-          verifiedAt,
-        };
-      }
-    } else if (type === VERIFICATION_TYPES.FORGOT_PASSWORD) {
-      if (!email)
-        throw new BadRequestException(VALIDATION_MESSAGES.REQUIRED('Email'));
-      const user = await this.userRepository.findUserByEmail(email);
-      if (!user)
-        throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
-
-      const storedHashedOtp = await this.redisService.get(
-        REDIS_KEYS.PASSWORD_RESET_OTP(email),
-      );
-      if (!storedHashedOtp) {
-        throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_EXPIRED);
-      }
-
-      // Brute-force protection: Check failed attempts (max 5)
-      const attemptsKey = REDIS_KEYS.OTP_ATTEMPTS(email);
-      const attempts = parseInt(
-        (await this.redisService.get(attemptsKey)) || '0',
-        10,
-      );
-
-      if (attempts >= 5) {
-        await this.redisService.del(REDIS_KEYS.PASSWORD_RESET_OTP(email));
-        await this.redisService.del(attemptsKey);
-        throw new BadRequestException(
-          'Too many failed attempts. Verification code invalidated. Please request a new code.',
-        );
-      }
-
-      let hashedOtp = storedHashedOtp;
-      if (storedHashedOtp.startsWith('{')) {
-        try {
-          const parsed = JSON.parse(storedHashedOtp);
-          hashedOtp = parsed.hashedOtp;
-        } catch {
-          // ignore parsing error
-        }
-      }
-
-      const isValid = await bcrypt.compare(code, hashedOtp);
-      if (!isValid) {
-        await this.redisService.set(
-          attemptsKey,
-          (attempts + 1).toString(),
-          300,
-        );
-        throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
-      }
-
-      await this.redisService.del(attemptsKey);
-
-      return {
-        message: 'Password reset code verified successfully',
-        email,
-        type,
-        method: method || VERIFICATION_METHODS.OTP,
-        verified: true,
-        verifiedAt,
-      };
+    const strategy = verificationStrategies[type];
+    if (!strategy) {
+      throw new BadRequestException(VALIDATION_MESSAGES.TYPE_INVALID('Type'));
     }
 
-    throw new BadRequestException(VALIDATION_MESSAGES.TYPE_INVALID('Type'));
+    return strategy.verify({
+      email,
+      code,
+      method,
+    });
   }
 
   // SERVICE
@@ -686,134 +483,111 @@ export class AuthService {
     return stored === token;
   }
 
-  // SERVICE — Unified Password Management (Reset via OTP OR Change via Current Password)
-  public async resetPassword(
+  // SERVICE — Change Password (In-App Authenticated Settings Flow)
+  public async changePassword(
     dto: UpdatePasswordDTO,
     currentUserSub?: string,
   ): Promise<{ message: string; updatedAt: string }> {
-    const { mode, email, code, currentPassword, newPassword } = dto;
+    const { currentPassword, newPassword } = dto;
     const updatedAt = new Date().toISOString();
 
-    // Mode 1: Change Password (In-App Authenticated Settings Flow)
-    if (mode === 'change') {
-      if (!currentUserSub) {
-        throw new UnauthorizedException(
-          'Authentication required to change password',
-        );
-      }
-
-      if (!currentPassword) {
-        throw new BadRequestException('Current password is required');
-      }
-
-      const user =
-        await this.userRepository.findByIdWithPassword(currentUserSub);
-      if (!user) {
-        throw new NotFoundException(RESPONSE_MESSAGES.USER_NOT_FOUND);
-      }
-
-      const isPasswordValid = await bcrypt.compare(
-        currentPassword,
-        user.passwordHash || '',
+    if (!currentUserSub) {
+      throw new UnauthorizedException(
+        'Authentication required to change password',
       );
-      if (!isPasswordValid) {
-        throw new UnauthorizedException('Current password is incorrect');
-      }
-
-      if (currentPassword === newPassword) {
-        throw new BadRequestException(
-          'New password must be different from current password',
-        );
-      }
-
-      const salt = await bcrypt.genSalt(10);
-      const passwordHash = await bcrypt.hash(newPassword, salt);
-      await this.userRepository.update({ id: user.id }, { passwordHash });
-
-      return {
-        message: 'Password updated successfully',
-        updatedAt,
-      };
     }
 
-    // Mode 2: Forgot Password Reset (Unauthenticated OTP Flow)
-    if (mode === 'forgot') {
-      if (!email || !code) {
-        throw new BadRequestException(
-          'Email and verification code are required for password reset',
-        );
-      }
-
-      const user = await this.userRepository.findUserByEmail(email);
-      if (!user) {
-        throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
-      }
-
-      const storedHashedOtp = await this.redisService.get(
-        REDIS_KEYS.PASSWORD_RESET_OTP(email),
-      );
-
-      if (!storedHashedOtp) {
-        throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_EXPIRED);
-      }
-
-      // Check failed attempts (max 5)
-      const attemptsKey = REDIS_KEYS.OTP_ATTEMPTS(email);
-      const attempts = parseInt(
-        (await this.redisService.get(attemptsKey)) || '0',
-        10,
-      );
-
-      if (attempts >= 5) {
-        await this.redisService.del(REDIS_KEYS.PASSWORD_RESET_OTP(email));
-        await this.redisService.del(attemptsKey);
-        throw new BadRequestException(
-          'Too many failed attempts. Verification code invalidated. Please request a new code.',
-        );
-      }
-
-      let hashedOtp = storedHashedOtp;
-      if (storedHashedOtp.startsWith('{')) {
-        try {
-          const parsed = JSON.parse(storedHashedOtp);
-          hashedOtp = parsed.hashedOtp;
-        } catch {
-          // ignore parsing error
-        }
-      }
-
-      const isValid = await bcrypt.compare(code, hashedOtp);
-      if (!isValid) {
-        await this.redisService.set(
-          attemptsKey,
-          (attempts + 1).toString(),
-          300,
-        );
-        throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
-      }
-
-      // Update password explicitly using update query
-      const salt = await bcrypt.genSalt(10);
-      const passwordHash = await bcrypt.hash(newPassword, salt);
-      await this.userRepository.update({ id: user.id }, { passwordHash });
-
-      // Clean up Redis keys
-      await this.redisService.del(REDIS_KEYS.PASSWORD_RESET_OTP(email));
-      await this.redisService.del(attemptsKey);
-
-      // Revoke all active sessions for security
-      await this.logoutAll(user.id);
-
-      return {
-        message:
-          'Password reset successfully. Please log in with your new password.',
-        updatedAt,
-      };
+    if (!currentPassword) {
+      throw new BadRequestException('Current password is required');
     }
 
-    throw new BadRequestException(
-      'Invalid mode. Mode must be either "forgot" or "change"',
+    const user =
+      await this.userRepository.findByIdWithPassword(currentUserSub);
+    if (!user) {
+      throw new NotFoundException(RESPONSE_MESSAGES.USER_NOT_FOUND);
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.passwordHash || '',
     );
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    if (currentPassword === newPassword) {
+      throw new BadRequestException(
+        'New password must be different from current password',
+      );
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+    await this.userRepository.update({ id: user.id }, { passwordHash });
+
+    return {
+      message: 'Password updated successfully',
+      updatedAt,
+    };
+  }
+
+  // SERVICE — Forgot Password Reset (Unauthenticated OTP Flow)
+  public async resetPasswordForgot(
+    dto: UpdatePasswordDTO,
+  ): Promise<{ message: string; updatedAt: string }> {
+    const { email, code, newPassword } = dto;
+    const updatedAt = new Date().toISOString();
+
+    if (!email || !code) {
+      throw new BadRequestException(
+        'Email and verification code are required for password reset',
+      );
+    }
+
+    const user = await this.userRepository.findUserByEmail(email);
+    if (!user) {
+      throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
+    }
+
+    const storedHashedOtp = await this.redisService.get(
+      REDIS_KEYS.PASSWORD_RESET_OTP(email),
+    );
+
+    if (!storedHashedOtp) {
+      throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_EXPIRED);
+    }
+
+    let hashedOtp = storedHashedOtp;
+    if (storedHashedOtp.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(storedHashedOtp);
+        hashedOtp = parsed.hashedOtp;
+      } catch {
+        // ignore parsing error
+      }
+    }
+
+    const isValid = await bcrypt.compare(code, hashedOtp);
+    if (!isValid) {
+      throw new BadRequestException(RESPONSE_MESSAGES.VERIFICATION_INVALID);
+    }
+
+    // Update password explicitly using update query
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+    await this.userRepository.update({ id: user.id }, { passwordHash });
+
+    // Clean up Redis keys
+    await this.redisService.del(REDIS_KEYS.PASSWORD_RESET_OTP(email));
+
+    // Revoke all active sessions for security
+    await this.logoutAll(user.id);
+
+    return {
+      message:
+        'Password reset successfully. Please log in with your new password.',
+      updatedAt,
+    };
   }
 
   public async getSessionById(sessionId: string): Promise<Session | null> {
@@ -830,4 +604,6 @@ export class AuthService {
       maxAge: maxAge ?? 60 * 60 * 1000, // 1 hour in ms
     };
   }
+
 }
+
